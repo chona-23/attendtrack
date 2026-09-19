@@ -1,0 +1,23 @@
+# Firebase App Hosting Configuration
+# See: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+  cpu: 1
+  memory: 512Mi
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyD7yvxCXAxrKyR9Z_ELklMP_ejWJHhh6S8
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: testchecker-4caeb.firebaseapp.com
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: testchecker-4caeb
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: testchecker-4caeb.firebasestorage.app
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "1065494682602"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:1065494682602:web:368abf9439fdf7251b7093"
