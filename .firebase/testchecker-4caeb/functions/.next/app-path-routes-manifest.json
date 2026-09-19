@@ -1,0 +1,22 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin/employees/page": "/admin/employees",
+  "/admin/incidences/page": "/admin/incidences",
+  "/admin/login/page": "/admin/login",
+  "/admin/page": "/admin",
+  "/admin/records/page": "/admin/records",
+  "/admin/reports/page": "/admin/reports",
+  "/api/admin/employees/route": "/api/admin/employees",
+  "/api/admin/verify/route": "/api/admin/verify",
+  "/api/auth/verify-totp/route": "/api/auth/verify-totp",
+  "/dashboard/page": "/dashboard",
+  "/favicon.ico/route": "/favicon.ico",
+  "/history/page": "/history",
+  "/login/page": "/login",
+  "/page": "/",
+  "/profile/page": "/profile",
+  "/register/page": "/register",
+  "/setup-2fa/page": "/setup-2fa",
+  "/verify-2fa/page": "/verify-2fa"
+}

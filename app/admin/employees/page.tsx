@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
 import { format } from "date-fns";
 import {
   Search, Users, RefreshCw, Mail, Clock,
@@ -163,14 +163,43 @@ function EditEmployeeModal({
       body.extraHoursAllowed   = extraAllowed !== "" ? Number(extraAllowed) : 0;
       body.profileVisible      = profileVisible;
 
-      const res = await fetch("/api/admin/employees", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al actualizar");
-      setSuccess("Perfil del empleado actualizado con éxito.");
+      let successMessage = "Perfil del empleado actualizado con éxito.";
+      try {
+        const res = await fetch("/api/admin/employees", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok && res.status !== 404) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Error al actualizar");
+        }
+        if (res.status === 404) {
+          throw new Error("404_STATIC");
+        }
+      } catch (apiErr: unknown) {
+        if ((apiErr as Error).message === "404_STATIC" || (apiErr as Error).name === "TypeError") {
+          // Static export fallback — update Firestore document directly
+          const updateFields: Record<string, any> = {
+            displayName,
+            email,
+            project,
+            workerType,
+            workingHours: { start: hoursStart, end: hoursEnd },
+            extraHoursAuthorized: extraAuth,
+            extraHoursAllowed: extraAllowed !== "" ? Number(extraAllowed) : 0,
+            profileVisible,
+          };
+          await setDoc(doc(db, "users", employee.uid), updateFields, { merge: true });
+          if (password.length >= 6) {
+            successMessage = "Perfil actualizado. (Nota: El cambio de contraseña requiere backend serverless o restablecimiento por correo en modo estático).";
+          }
+        } else {
+          throw apiErr;
+        }
+      }
+
+      setSuccess(successMessage);
       setPassword("");
       setTimeout(() => { onSaved(); onClose(); }, 1200);
     } catch (err: unknown) {
@@ -184,13 +213,24 @@ function EditEmployeeModal({
     setError("");
     setDeleting(true);
     try {
-      const res = await fetch("/api/admin/employees", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: employee.uid }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al eliminar");
+      try {
+        const res = await fetch("/api/admin/employees", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: employee.uid }),
+        });
+        if (!res.ok && res.status !== 404) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Error al eliminar");
+        }
+        if (res.status === 404) throw new Error("404_STATIC");
+      } catch (apiErr: unknown) {
+        if ((apiErr as Error).message === "404_STATIC" || (apiErr as Error).name === "TypeError") {
+          await updateDoc(doc(db, "users", employee.uid), { disabled: true });
+        } else {
+          throw apiErr;
+        }
+      }
       setSuccess("Usuario deshabilitado. Se conservan los registros de asistencia.");
       setTimeout(() => { onSaved(); onClose(); }, 1500);
     } catch (err: unknown) {
