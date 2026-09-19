@@ -1,0 +1,623 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 4326
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 18 Tf
+20.6999999999999993 TL
+0 g
+56.6929133858267775 785.1970866141732586 Td
+(Session Key Updates & Summary) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 734.1734645669291695 Td
+(1. Image to SVG Conversion & Application) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 702.9923622047243725 Td
+(Details: Converted a requested image to SVG format and successfully applied the changes.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 676.0632283464566399 Td
+(Why: SVG provides a scalable, resolution-independent vector format ensuring the image appears) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 660.4726771653542983 Td
+(crisp on all devices without loss of quality.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 633.5435433070865656 Td
+(Summary: Image asset updated to SVG format.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 592.4411811023621794 Td
+(2. Employee Profile - Incidences Section) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 561.2600787401574962 Td
+(Details: Created a new 'Incidences' section in the employee profile. This allows workers to log) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 545.6695275590550409 Td
+(pre-approved permissions \(late arrivals, leaving early, extra hours, special medical/childcare) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 530.0789763779526993 Td
+(requests\).) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 503.1498425196849666 Td
+(Why: To provide a streamlined way for employees to report and track specific exceptions and) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 487.559291338582625 Td
+(permissions within their attendance records.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 460.6301574803148924 Td
+(Summary: Added Incidences submission capability for employees.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 419.5277952755905062 Td
+(3. Extra Hours Worked - Numerical Slider) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 388.3466929133857661 Td
+(Details: Added a numerical sliding bar to specifically input the amount of extra hours worked in the) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 372.7561417322834245 Td
+(Incidences section. Fixed an accuracy issue where the slider value wasn't capturing precisely.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 345.8270078740156919 Td
+(Why: To give employees an intuitive, accurate, and error-free UI for logging precise extra hour) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 330.2364566929132934 Td
+(values.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 303.3073228346455608 Td
+(Summary: Implemented and refined a numeric slider for logging extra hours.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 262.2049606299211746 Td
+(4. Admin Dashboard - Incidences Management) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 231.0238582677164914 Td
+(Details: Updated the Admin portal to display newly created incidences next to 'Clocked Out'.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 215.4333070866141497 Td
+(Created an action section between Reports and Records allowing admins to Authorize or Reject) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 199.8427559055116944 Td
+(worker incidences.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 172.9136220472439618 Td
+(Why: Admins needed a direct way to view pending worker requests and take immediate action on) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 157.3230708661416202 Td
+(them \(authorize/deny\) from the dashboard.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 130.3939370078738875 Td
+(Summary: Added Incidence management, authorization actions, and visibility for) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 114.8033858267715459 Td
+(Administrators.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 73.7010236220471597 Td
+(5. Report Generation - Incidences Included) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 4067
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 785.1970866141732586 Td
+(Details: Updated the Admin 'Generate Report' functionality to include the total number of incidences) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 769.6065354330708033 Td
+(and their authorization status \(authorized vs. unauthorized\).) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 742.6774015748030706 Td
+(Why: To ensure that payroll or management reports accurately reflect exceptions, special) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 727.086850393700729 Td
+(permissions, and extra hours authorized by administrators.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 700.15771653543311 Td
+(Summary: Reports now include incidence totals and authorization statuses.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 659.0553543307086102 Td
+(6. Application Theme - Light Mode Implementation) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 627.8742519685039269 Td
+(Details: Implemented a professional, natural-looking Light Theme with neutral colors and high) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 612.2837007874015853 Td
+(contrasts across the entire application \(Admin, Employee, and Login/Register profiles\).) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 585.3545669291338527 Td
+(Why: To improve accessibility, readability, and user experience for users who prefer or require a) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 569.7640157480313974 Td
+(light interface, ensuring a premium aesthetic.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 542.8348818897636647 Td
+(Summary: Complete Light mode styling implemented application-wide.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 501.7325196850393354 Td
+(7. Theme Toggle Button) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 470.5514173228345953 Td
+(Details: Added a global toggle button positioned at the lower right corner with Sun and Moon icons) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 454.9608661417322537 Td
+(to switch between Light and Dark modes. Adjusted contrast and fixed an alignment issue where the) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 439.3703149606298552 Td
+(Sun icon wasn't perfectly centered in light mode.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 412.4411811023621226 Td
+(Why: To give users an easily accessible, persistent, and visually polished way to switch their theme) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 396.850629921259781 Td
+(preference on any screen.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 369.9214960629920483 Td
+(Summary: Added and perfected a floating Theme Toggle component.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+56.6929133858267775 328.8191338582676053 Td
+(8. React Hydration Mismatch Resolution) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 297.6380314960629221 Td
+(Details: Fixed a Hydration mismatch error in the RootLayout by adding suppressHydrationWarning) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 282.0474803149605805 Td
+(to the HTML tag.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 255.1183464566928478 Td
+(Why: The client-side theme script was mutating the HTML class before React hydrated, causing a) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 239.5277952755905062 Td
+(mismatch between the server-rendered HTML and client properties. This fix instructs React to) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 223.9372440944881646 Td
+(safely ignore the attribute discrepancy.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+56.6929133858267775 197.0081102362204319 Td
+(Summary: Eliminated console hydration errors caused by the theme provider.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 2.5.2)
+/CreationDate (D:20260914085324-06'00')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000008786 00000 n 
+0000010611 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000004530 00000 n 
+0000004667 00000 n 
+0000008849 00000 n 
+0000008974 00000 n 
+0000009104 00000 n 
+0000009237 00000 n 
+0000009375 00000 n 
+0000009499 00000 n 
+0000009628 00000 n 
+0000009760 00000 n 
+0000009896 00000 n 
+0000010024 00000 n 
+0000010151 00000 n 
+0000010280 00000 n 
+0000010413 00000 n 
+0000010515 00000 n 
+0000010861 00000 n 
+0000010947 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <655A137000557D9594558F6CCFFF575C> <655A137000557D9594558F6CCFFF575C> ]
+>>
+startxref
+11051
+%%EOF
