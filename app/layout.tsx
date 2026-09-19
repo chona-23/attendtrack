@@ -4,8 +4,6 @@ import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-// Prevent static prerendering — all pages require Firebase which needs env vars at runtime
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "AttendTrack — Control de Asistencia Empresarial",
