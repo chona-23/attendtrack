@@ -11,9 +11,10 @@
 # testing
 /coverage
 
-# next.js
+# next.js & firebase
 /.next/
 /out/
+.firebase
 
 # production
 /build
