@@ -1,1 +1,0 @@
-globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/auth/verify-totp/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/imaganal/Documents/CSCOMSFT copy/drap_store/Anti/app/api/auth/verify-totp/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};
