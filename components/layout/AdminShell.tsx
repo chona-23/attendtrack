@@ -27,7 +27,11 @@ function AdminSidebar() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch("/api/admin/verify", { method: "DELETE" });
+    try { await fetch("/api/admin/verify", { method: "DELETE" }); } catch {}
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("admin_logged_in");
+      document.cookie = "admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
     router.push("/admin/login");
   };
 
@@ -97,7 +101,11 @@ function AdminBottomNav() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch("/api/admin/verify", { method: "DELETE" });
+    try { await fetch("/api/admin/verify", { method: "DELETE" }); } catch {}
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("admin_logged_in");
+      document.cookie = "admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
     router.push("/admin/login");
   };
 
@@ -133,6 +141,31 @@ function AdminBottomNav() {
 }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const [authorized, setAuthorized] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isLoggedIn =
+        sessionStorage.getItem("admin_logged_in") === "true" ||
+        document.cookie.includes("admin_session");
+
+      if (!isLoggedIn) {
+        router.push("/admin/login");
+      } else {
+        setAuthorized(true);
+      }
+    }
+  }, [router]);
+
+  if (!authorized) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
+        Verificando acceso de administrador...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
       <AdminSidebar />
