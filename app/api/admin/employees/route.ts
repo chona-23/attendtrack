@@ -102,6 +102,7 @@ export async function PATCH(request: Request) {
     }
     if (profileVisible !== undefined) {
       firestoreUpdates.profileVisible = Boolean(profileVisible);
+      firestoreUpdates.showWorkProfile = Boolean(profileVisible);
     }
 
     // Nothing to do?

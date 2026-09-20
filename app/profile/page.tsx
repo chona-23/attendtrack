@@ -36,7 +36,10 @@ export default function ProfilePage() {
     );
   }
 
-  const showWorkProfile = profile.role === "admin" || profile.showWorkProfile === true;
+  const showWorkProfile =
+    profile.role === "admin" ||
+    profile.showWorkProfile === true ||
+    profile.profileVisible === true;
 
   return (
     <AppShell>

@@ -37,6 +37,7 @@ interface Employee {
   extraHoursAuthorized?: boolean;
   extraHoursAllowed?: number;
   profileVisible?: boolean;
+  showWorkProfile?: boolean;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ function EditEmployeeModal({
   const [hoursEnd, setHoursEnd]                 = useState(employee.workingHours?.end ?? "");
   const [extraAuth, setExtraAuth]               = useState(employee.extraHoursAuthorized ?? false);
   const [extraAllowed, setExtraAllowed]         = useState(String(employee.extraHoursAllowed ?? ""));
-  const [profileVisible, setProfileVisible]     = useState(employee.profileVisible ?? false);
+  const [profileVisible, setProfileVisible]     = useState(employee.showWorkProfile ?? employee.profileVisible ?? false);
 
   const [saving, setSaving]           = useState(false);
   const [deleting, setDeleting]       = useState(false);
@@ -162,6 +163,7 @@ function EditEmployeeModal({
       body.extraHoursAuthorized = extraAuth;
       body.extraHoursAllowed   = extraAllowed !== "" ? Number(extraAllowed) : 0;
       body.profileVisible      = profileVisible;
+      body.showWorkProfile     = profileVisible;
 
       let successMessage = "Perfil del empleado actualizado con éxito.";
       try {
@@ -189,6 +191,7 @@ function EditEmployeeModal({
             extraHoursAuthorized: extraAuth,
             extraHoursAllowed: extraAllowed !== "" ? Number(extraAllowed) : 0,
             profileVisible,
+            showWorkProfile: profileVisible,
           };
           await setDoc(doc(db, "users", employee.uid), updateFields, { merge: true });
           if (password.length >= 6) {

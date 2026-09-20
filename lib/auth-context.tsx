@@ -34,6 +34,7 @@ interface UserProfile {
   extraHoursAuthorized?: boolean;
   extraHoursAllowed?: number;
   showWorkProfile?: boolean;
+  profileVisible?: boolean;
 }
 
 interface AuthContextValue {
