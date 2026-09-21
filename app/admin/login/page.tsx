@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Shield, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -104,8 +105,15 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm relative z-10 animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border-2 border-rose-500/20 dark:border-rose-500/30 flex items-center justify-center mx-auto mb-4">
-            <Shield size={28} className="text-rose-600 dark:text-rose-400" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4 shadow-xl shadow-rose-500/20 border-2 border-rose-500/30">
+            <Image
+              src="/icon.png"
+              alt="Logo Consola Admin"
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Consola Admin</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">AttendTrack — Acceso Restringido</p>
