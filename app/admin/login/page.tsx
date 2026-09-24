@@ -34,19 +34,19 @@ export default function AdminLoginPage() {
 
         if (res.ok) {
           apiSuccess = true;
-        } else {
+        } else if (res.status === 401) {
           const contentType = res.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
             const data = await res.json();
-            if (data.error) {
-              setError(data.error);
-              setLoading(false);
-              return;
-            }
+            setError(data.error || "Credenciales de administrador inválidas.");
+          } else {
+            setError("Credenciales de administrador inválidas.");
           }
+          setLoading(false);
+          return;
         }
       } catch {
-        // Ignored: fetch failed because API route doesn't exist on static hosting
+        // Ignored: fetch failed because API route doesn't exist on static hosting or server unreachable
       }
 
       // 2. If API route unavailable (static hosting mode), authenticate with Firebase Auth & client fallback
