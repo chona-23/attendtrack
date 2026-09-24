@@ -28,6 +28,9 @@ export function generateDailyCSV(reports: DailyReport[]): string {
     complete: "Completo",
     incomplete: "Incompleto",
     absent: "Ausente",
+    vacation: "Vacaciones (PTO)",
+    medical_leave: "Incapacidad Médica",
+    holiday: "Día Festivo",
   };
 
   const rows = reports.map((r) => {
@@ -125,6 +128,9 @@ export async function generateDailyPDF(
     complete: "Completo",
     incomplete: "Incompleto",
     absent: "Ausente",
+    vacation: "Vacaciones (PTO)",
+    medical_leave: "Incapacidad Médica",
+    holiday: "Día Festivo",
   };
 
   // Header

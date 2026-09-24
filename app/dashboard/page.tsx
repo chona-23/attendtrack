@@ -18,6 +18,8 @@ import {
 } from "@/lib/incidences";
 
 const INCIDENCE_TYPES: IncidenceType[] = [
+  "vacation",
+  "medical_leave",
   "late_arrival_approved",
   "early_departure_approved",
   "extra_hours",
@@ -40,8 +42,11 @@ export default function DashboardPage() {
   const [now, setNow] = useState<Date>(new Date());
 
   // Incidences state
+  const todayStr = format(new Date(), "yyyy-MM-dd");
   const [incidences, setIncidences] = useState<IncidenceRecord[]>([]);
-  const [incType, setIncType] = useState<IncidenceType>("late_arrival_approved");
+  const [incType, setIncType] = useState<IncidenceType>("vacation");
+  const [incStartDate, setIncStartDate] = useState(todayStr);
+  const [incEndDate, setIncEndDate] = useState(todayStr);
   const [incNotes, setIncNotes] = useState("");
   const [incExtraHours, setIncExtraHours] = useState(1);
   const [incSubmitting, setIncSubmitting] = useState(false);
@@ -74,6 +79,11 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user) return;
 
+    if ((incType === "vacation" || incType === "medical_leave") && incEndDate < incStartDate) {
+      setIncError("La fecha de fin no puede ser anterior a la fecha de inicio.");
+      return;
+    }
+
     setIncSubmitting(true);
     setIncSuccess(false);
     setIncError("");
@@ -82,11 +92,12 @@ export default function DashboardPage() {
       await recordIncidence(
         user.uid,
         user.email || "",
-        profile?.displayName || user.email?.split("@")[0] || "Employee",
+        profile?.displayName || user.email?.split("@")[0] || "Empleado",
         incType,
         incNotes,
-        undefined,
-        incType === "extra_hours" ? incExtraHours : undefined
+        (incType === "vacation" || incType === "medical_leave") ? incStartDate : undefined,
+        incType === "extra_hours" ? incExtraHours : undefined,
+        (incType === "vacation" || incType === "medical_leave") ? incEndDate : undefined
       );
 
       setIncNotes("");
@@ -210,6 +221,42 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Date Range Selector — for Vacaciones and Incapacidad Médica */}
+              {(incType === "vacation" || incType === "medical_leave") && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-blue-50/50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="inc-start-date" className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      Fecha de Inicio
+                    </label>
+                    <input
+                      id="inc-start-date"
+                      type="date"
+                      value={incStartDate}
+                      onChange={(e) => {
+                        setIncStartDate(e.target.value);
+                        if (incEndDate < e.target.value) setIncEndDate(e.target.value);
+                      }}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="inc-end-date" className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      Fecha de Fin
+                    </label>
+                    <input
+                      id="inc-end-date"
+                      type="date"
+                      min={incStartDate}
+                      value={incEndDate}
+                      onChange={(e) => setIncEndDate(e.target.value)}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Extra Hours Slider — only shown for extra_hours type */}
               {incType === "extra_hours" && (() => {

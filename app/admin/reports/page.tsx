@@ -10,6 +10,7 @@ import { fetchAllAttendanceRecords } from "@/lib/attendance";
 import { aggregateDailyReports, aggregateSummaryReports, minutesToHHMM, DailyReport, SummaryReport } from "@/lib/reports";
 import { generateDailyCSV, generateSummaryCSV, downloadCSV, generateDailyPDF, generateSummaryPDF } from "@/lib/export";
 import { fetchAllIncidences, INCIDENCE_LABELS } from "@/lib/incidences";
+import { fetchHolidays } from "@/lib/holidays";
 
 type ReportType = "daily" | "summary";
 
@@ -17,6 +18,9 @@ const STATUS_LABELS_MAP: Record<string, string> = {
   complete: "Completo",
   incomplete: "Incompleto",
   absent: "Ausente",
+  vacation: "Vacaciones (PTO)",
+  medical_leave: "Incapacidad Médica",
+  holiday: "Día Festivo",
 };
 
 const INCIDENCE_STATUS_LABELS_MAP: Record<string, string> = {
@@ -43,11 +47,12 @@ export default function AdminReportsPage() {
     setGenerated(false);
 
     try {
-      const [events, incidences] = await Promise.all([
+      const [events, incidences, holidays] = await Promise.all([
         fetchAllAttendanceRecords(startDate, endDate),
         fetchAllIncidences(startDate, endDate),
+        fetchHolidays(),
       ]);
-      const daily = aggregateDailyReports(events, incidences);
+      const daily = aggregateDailyReports(events, incidences, holidays);
       setDailyReports(daily);
 
       const businessDays = Math.max(1, differenceInBusinessDays(

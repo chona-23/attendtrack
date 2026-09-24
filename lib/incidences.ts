@@ -15,6 +15,8 @@ import { getLocalDateString } from "./attendance";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type IncidenceType =
+  | "vacation"
+  | "medical_leave"
   | "late_arrival_approved"
   | "early_departure_approved"
   | "extra_hours"
@@ -31,6 +33,7 @@ export interface IncidenceRecord {
   userEmail: string;
   userName: string;
   date: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD for multi-day time-off / medical leave
   type: IncidenceType;
   notes: string;
   status: IncidenceStatus;
@@ -41,6 +44,8 @@ export interface IncidenceRecord {
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 export const INCIDENCE_LABELS: Record<IncidenceType, string> = {
+  vacation: "Vacaciones (Paid Time-Off)",
+  medical_leave: "Incapacidad Médica (Medical Leave)",
   late_arrival_approved: "Llegada tardía pre-aprobada",
   early_departure_approved: "Salida anticipada pre-aprobada",
   extra_hours: "Horas extra trabajadas",
@@ -53,7 +58,8 @@ export const INCIDENCE_LABELS: Record<IncidenceType, string> = {
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 /**
- * Record a new incidence for an employee.
+ * Record a new incidence or time-off / medical leave for an employee.
+ * If endDate is provided (for vacations / medical leave), generates records for each date in the range.
  */
 export async function recordIncidence(
   userId: string,
@@ -62,22 +68,43 @@ export async function recordIncidence(
   type: IncidenceType,
   notes: string,
   date?: string,
-  extraHours?: number
+  extraHours?: number,
+  endDate?: string
 ): Promise<void> {
-  const payload: Record<string, unknown> = {
-    userId,
-    userEmail,
-    userName,
-    date: date ?? getLocalDateString(),
-    type,
-    notes,
-    status: "pending" as IncidenceStatus,
-    timestamp: Timestamp.now(),
-  };
-  if (type === "extra_hours" && extraHours !== undefined) {
-    payload.extraHours = extraHours;
+  const startDateStr = date ?? getLocalDateString();
+  const endDateStr = endDate && endDate >= startDateStr ? endDate : startDateStr;
+
+  // Generate date list between startDate and endDate
+  const dates: string[] = [];
+  const curr = new Date(startDateStr + "T12:00:00");
+  const end = new Date(endDateStr + "T12:00:00");
+
+  while (curr <= end) {
+    const y = curr.getFullYear();
+    const m = String(curr.getMonth() + 1).padStart(2, "0");
+    const d = String(curr.getDate()).padStart(2, "0");
+    dates.push(`${y}-${m}-${d}`);
+    curr.setDate(curr.getDate() + 1);
   }
-  await addDoc(collection(db, "incidences"), payload);
+
+  for (const dStr of dates) {
+    const payload: Record<string, unknown> = {
+      userId,
+      userEmail,
+      userName,
+      date: dStr,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      type,
+      notes,
+      status: "pending" as IncidenceStatus,
+      timestamp: Timestamp.now(),
+    };
+    if (type === "extra_hours" && extraHours !== undefined) {
+      payload.extraHours = extraHours;
+    }
+    await addDoc(collection(db, "incidences"), payload);
+  }
 }
 
 // ─── Employee real-time listener ──────────────────────────────────────────────

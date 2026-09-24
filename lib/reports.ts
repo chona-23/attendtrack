@@ -1,6 +1,15 @@
 import { AttendanceEvent } from "./attendance";
 import { IncidenceRecord, INCIDENCE_LABELS } from "./incidences";
+import { HolidayRecord, getHolidayForDate } from "./holidays";
 import { format, parseISO, differenceInMinutes } from "date-fns";
+
+export type DailyStatus =
+  | "complete"
+  | "incomplete"
+  | "absent"
+  | "vacation"
+  | "medical_leave"
+  | "holiday";
 
 export interface DailyReport {
   date: string;
@@ -16,7 +25,8 @@ export interface DailyReport {
   totalMinutes: number;
   lunchMinutes: number;
   workedMinutes: number;
-  status: "complete" | "incomplete" | "absent";
+  status: DailyStatus;
+  holidayName?: string;
   /** Incidences logged by the employee on this date */
   incidences: IncidenceRecord[];
 }
@@ -29,6 +39,9 @@ export interface SummaryReport {
   workerType?: string;
   daysPresent: number;
   daysAbsent: number;
+  daysVacation: number;
+  daysMedicalLeave: number;
+  daysHoliday: number;
   totalWorkedHours: number;
   averageDailyHours: number;
   lateArrivals: number; // clock-in after 09:00
@@ -41,7 +54,8 @@ export interface SummaryReport {
  */
 export function aggregateDailyReports(
   events: AttendanceEvent[],
-  incidences: IncidenceRecord[] = []
+  incidences: IncidenceRecord[] = [],
+  holidays: HolidayRecord[] = []
 ): DailyReport[] {
   // Build incidence lookup: userId__date -> IncidenceRecord[]
   const incMap = new Map<string, IncidenceRecord[]>();
@@ -97,14 +111,31 @@ export function aggregateDailyReports(
     }
 
     const workedMinutes = totalMinutes - lunchMinutes;
-    const status =
-      clockInEvent && clockOutEvent
-        ? "complete"
-        : clockInEvent
-        ? "incomplete"
-        : "absent";
-
     const incKey = `${first.userId}__${first.date}`;
+    const dayIncs = incMap.get(incKey) ?? [];
+
+    // Check special statuses: Holiday, Vacation, Medical Leave
+    const hol = getHolidayForDate(first.date, holidays);
+    const hasVacation = dayIncs.some(
+      (i) => i.type === "vacation" && i.status !== "rejected"
+    );
+    const hasMedicalLeave = dayIncs.some(
+      (i) => i.type === "medical_leave" && i.status !== "rejected"
+    );
+
+    let status: DailyStatus = "absent";
+    if (hol) {
+      status = "holiday";
+    } else if (hasVacation) {
+      status = "vacation";
+    } else if (hasMedicalLeave) {
+      status = "medical_leave";
+    } else if (clockInEvent && clockOutEvent) {
+      status = "complete";
+    } else if (clockInEvent) {
+      status = "incomplete";
+    }
+
     reports.push({
       date: first.date,
       userId: first.userId,
@@ -118,7 +149,8 @@ export function aggregateDailyReports(
       lunchMinutes,
       workedMinutes,
       status,
-      incidences: incMap.get(incKey) ?? [],
+      holidayName: hol?.name,
+      incidences: dayIncs,
     });
   }
 
@@ -144,6 +176,9 @@ export function aggregateSummaryReports(
         userEmail: report.userEmail,
         daysPresent: 0,
         daysAbsent: 0,
+        daysVacation: 0,
+        daysMedicalLeave: 0,
+        daysHoliday: 0,
         totalWorkedHours: 0,
         averageDailyHours: 0,
         lateArrivals: 0,
@@ -154,7 +189,7 @@ export function aggregateSummaryReports(
 
     const summary = summaries.get(report.userId)!;
 
-    if (report.status !== "absent") {
+    if (report.status === "complete" || report.status === "incomplete") {
       summary.daysPresent++;
       summary.totalWorkedHours += report.workedMinutes / 60;
 
@@ -166,16 +201,21 @@ export function aggregateSummaryReports(
       if (report.clockOut && report.clockOut < "16:55") {
         summary.earlyDepartures++;
       }
+    } else if (report.status === "vacation") {
+      summary.daysVacation++;
+    } else if (report.status === "medical_leave") {
+      summary.daysMedicalLeave++;
+    } else if (report.status === "holiday") {
+      summary.daysHoliday++;
+    } else if (report.status === "absent") {
+      summary.daysAbsent++;
     }
+
     summary.totalIncidences += report.incidences.length;
   }
 
-  // Compute absences and averages
+  // Compute averages
   for (const [, summary] of summaries) {
-    summary.daysAbsent = Math.max(
-      0,
-      expectedWorkDays - summary.daysPresent
-    );
     summary.averageDailyHours =
       summary.daysPresent > 0
         ? summary.totalWorkedHours / summary.daysPresent
