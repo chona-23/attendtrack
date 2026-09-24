@@ -3,6 +3,7 @@ import {
   addDoc,
   doc,
   updateDoc,
+  writeBatch,
   query,
   where,
   onSnapshot,
@@ -33,6 +34,7 @@ export interface IncidenceRecord {
   userEmail: string;
   userName: string;
   date: string; // YYYY-MM-DD
+  startDate?: string; // YYYY-MM-DD for multi-day time-off / medical leave
   endDate?: string; // YYYY-MM-DD for multi-day time-off / medical leave
   type: IncidenceType;
   notes: string;
@@ -183,6 +185,23 @@ export async function updateIncidenceStatus(
   status: IncidenceStatus
 ): Promise<void> {
   await updateDoc(doc(collection(db, "incidences"), incidenceId), { status });
+}
+
+/**
+ * Set the status of multiple incidences in a batch (e.g. approving a multi-day period request).
+ */
+export async function updateBatchIncidenceStatus(
+  incidenceIds: string[],
+  status: IncidenceStatus
+): Promise<void> {
+  if (!incidenceIds || incidenceIds.length === 0) return;
+  const batch = writeBatch(db);
+  for (const id of incidenceIds) {
+    if (id) {
+      batch.update(doc(collection(db, "incidences"), id), { status });
+    }
+  }
+  await batch.commit();
 }
 
 // ─── Admin: real-time all incidences ──────────────────────────────────────────

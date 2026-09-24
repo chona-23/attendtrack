@@ -17,6 +17,7 @@ type ReportType = "daily" | "summary";
 const STATUS_LABELS_MAP: Record<string, string> = {
   complete: "Completo",
   incomplete: "Incompleto",
+  unconfirmed_out: "Salida no confirmada",
   absent: "Ausente",
   vacation: "Vacaciones (PTO)",
   medical_leave: "Incapacidad Médica",
@@ -52,7 +53,7 @@ export default function AdminReportsPage() {
         fetchAllIncidences(startDate, endDate),
         fetchHolidays(),
       ]);
-      const daily = aggregateDailyReports(events, incidences, holidays);
+      const daily = aggregateDailyReports(events, incidences, holidays, startDate, endDate);
       setDailyReports(daily);
 
       const businessDays = Math.max(1, differenceInBusinessDays(
@@ -250,7 +251,17 @@ export default function AdminReportsPage() {
                           <td className="px-4 py-3 text-slate-900 dark:text-slate-300 font-semibold">{minutesToHHMM(r.workedMinutes)}</td>
                           <td className="px-4 py-3">
                             <Badge
-                              variant={r.status === "complete" ? "success" : r.status === "incomplete" ? "warning" : "muted"}
+                              variant={
+                                r.status === "complete"
+                                  ? "success"
+                                  : r.status === "incomplete"
+                                  ? "info"
+                                  : r.status === "unconfirmed_out"
+                                  ? "warning"
+                                  : r.status === "absent"
+                                  ? "danger"
+                                  : "muted"
+                              }
                             >
                               {STATUS_LABELS_MAP[r.status] ?? r.status}
                             </Badge>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Calendar, AlertTriangle, Plus, CheckCircle2, Clock3, XCircle } from "lucide-react";
@@ -15,6 +15,7 @@ import {
   INCIDENCE_LABELS,
   IncidenceType,
   IncidenceRecord,
+  IncidenceStatus,
 } from "@/lib/incidences";
 
 const INCIDENCE_TYPES: IncidenceType[] = [
@@ -74,6 +75,51 @@ export default function DashboardPage() {
     });
     return unsub;
   }, [user]);
+
+  // Group user incidences into period requests for clean single-item display
+  const groupedUserPeriods = useMemo(() => {
+    const map = new Map<string, {
+      groupId: string;
+      type: IncidenceType;
+      notes: string;
+      status: IncidenceStatus;
+      startDate: string;
+      endDate: string;
+      dayCount: number;
+      timestamp: any;
+      extraHours?: number;
+    }>();
+
+    for (const rec of incidences) {
+      const sDate = rec.startDate || rec.date;
+      const eDate = rec.endDate || rec.date;
+      const key = `${rec.userId}_${rec.type}_${sDate}_${eDate}_${rec.notes || ""}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          groupId: key,
+          type: rec.type,
+          notes: rec.notes,
+          status: rec.status,
+          startDate: sDate,
+          endDate: eDate,
+          dayCount: 1,
+          timestamp: rec.timestamp,
+          extraHours: rec.extraHours,
+        });
+      } else {
+        const item = map.get(key)!;
+        if (rec.date < item.startDate) item.startDate = rec.date;
+        if (rec.date > item.endDate) item.endDate = rec.date;
+        item.dayCount++;
+        if (rec.status === "pending") {
+          item.status = "pending";
+        }
+      }
+    }
+
+    return Array.from(map.values());
+  }, [incidences]);
 
   const handleIncidenceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -387,36 +433,57 @@ export default function DashboardPage() {
           </div>
 
           {/* Incidences list */}
-          {incidences.length > 0 && (
+          {groupedUserPeriods.length > 0 && (
             <div className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs">
-              <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Tus Incidencias ({incidences.length})
+                  Tus Incidencias ({groupedUserPeriods.length})
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Solicitudes consolidadas por periodo
                 </span>
               </div>
               <ul className="divide-y divide-slate-100 dark:divide-slate-700/50 max-h-72 overflow-y-auto">
-                {incidences.map((inc) => {
-                  const cfg = STATUS_CONFIG[inc.status];
+                {groupedUserPeriods.map((period) => {
+                  const cfg = STATUS_CONFIG[period.status];
                   const Icon = cfg.icon;
+                  const isMultiDay = period.dayCount > 1 || (period.endDate && period.endDate !== period.startDate);
+
                   return (
-                    <li key={inc.id} className="px-5 py-3 flex flex-col gap-1 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition">
+                    <li key={period.groupId} className="px-5 py-3 flex flex-col gap-1 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {INCIDENCE_LABELS[inc.type]}
-                          {inc.type === "extra_hours" && inc.extraHours !== undefined && (
-                            <span className="ml-2 text-blue-600 dark:text-blue-400 font-bold">{inc.extraHours.toFixed(1)} hrs</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {INCIDENCE_LABELS[period.type]}
+                          </span>
+                          {isMultiDay && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700">
+                              {period.dayCount} días
+                            </span>
                           )}
-                        </span>
+                          {period.type === "extra_hours" && period.extraHours !== undefined && (
+                            <span className="ml-2 text-blue-600 dark:text-blue-400 font-bold">{period.extraHours.toFixed(1)} hrs</span>
+                          )}
+                        </div>
                         <div className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.color}`}>
                           <Icon size={11} />
                           {cfg.label}
                         </div>
                       </div>
-                      {inc.notes && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{inc.notes}</p>
+                      {period.notes && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{period.notes}</p>
                       )}
                       <span className="text-xs text-slate-500 dark:text-slate-500">
-                        {inc.date} · {format(new Date(inc.timestamp.seconds * 1000), "HH:mm")}
+                        {isMultiDay ? (
+                          <span className="font-semibold text-purple-600 dark:text-purple-400">
+                            Periodo: {period.startDate} al {period.endDate} ({period.dayCount} días)
+                          </span>
+                        ) : (
+                          <span>Fecha: {period.startDate}</span>
+                        )}
+                        {period.timestamp?.seconds && (
+                          <span className="ml-2">· {format(new Date(period.timestamp.seconds * 1000), "HH:mm")}</span>
+                        )}
                       </span>
                     </li>
                   );

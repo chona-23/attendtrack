@@ -1,11 +1,12 @@
-import { AttendanceEvent } from "./attendance";
+import { AttendanceEvent, getLocalDateString } from "./attendance";
 import { IncidenceRecord, INCIDENCE_LABELS } from "./incidences";
 import { HolidayRecord, getHolidayForDate } from "./holidays";
-import { format, parseISO, differenceInMinutes } from "date-fns";
+import { format, parseISO, differenceInMinutes, addDays } from "date-fns";
 
 export type DailyStatus =
   | "complete"
   | "incomplete"
+  | "unconfirmed_out"
   | "absent"
   | "vacation"
   | "medical_leave"
@@ -42,120 +43,189 @@ export interface SummaryReport {
   daysVacation: number;
   daysMedicalLeave: number;
   daysHoliday: number;
+  daysUnconfirmedOut?: number;
   totalWorkedHours: number;
   averageDailyHours: number;
-  lateArrivals: number; // clock-in after 09:00
-  earlyDepartures: number; // clock-out before 17:00
+  lateArrivals: number; // clock-in after 09:05
+  earlyDepartures: number; // clock-out before 16:55
   totalIncidences: number;
 }
 
 /**
- * Group attendance events by user and date, then compute daily stats.
+ * Group attendance events by user and date across the given date range,
+ * calculating daily status (complete, incomplete, unconfirmed_out, absent, vacation, medical_leave, holiday).
+ * Automatically excludes Sundays from working days.
  */
 export function aggregateDailyReports(
   events: AttendanceEvent[],
   incidences: IncidenceRecord[] = [],
-  holidays: HolidayRecord[] = []
+  holidays: HolidayRecord[] = [],
+  startDateStr?: string,
+  endDateStr?: string
 ): DailyReport[] {
-  // Build incidence lookup: userId__date -> IncidenceRecord[]
+  // Collect all unique users across events and incidences
+  const usersMap = new Map<string, { userId: string; userName: string; userEmail: string }>();
+
+  for (const ev of events) {
+    if (ev.userId && !usersMap.has(ev.userId)) {
+      usersMap.set(ev.userId, {
+        userId: ev.userId,
+        userName: ev.userName || "Empleado",
+        userEmail: ev.userEmail || "",
+      });
+    }
+  }
+
+  for (const inc of incidences) {
+    if (inc.userId && !usersMap.has(inc.userId)) {
+      usersMap.set(inc.userId, {
+        userId: inc.userId,
+        userName: inc.userName || "Empleado",
+        userEmail: inc.userEmail || "",
+      });
+    }
+  }
+
+  // Build lookup maps: userId__date -> AttendanceEvent[] and IncidenceRecord[]
+  const eventsMap = new Map<string, AttendanceEvent[]>();
+  for (const event of events) {
+    const key = `${event.userId}__${event.date}`;
+    if (!eventsMap.has(key)) eventsMap.set(key, []);
+    eventsMap.get(key)!.push(event);
+  }
+
   const incMap = new Map<string, IncidenceRecord[]>();
   for (const inc of incidences) {
     const key = `${inc.userId}__${inc.date}`;
     if (!incMap.has(key)) incMap.set(key, []);
     incMap.get(key)!.push(inc);
   }
-  // Group events by userId + date
-  const groups = new Map<string, AttendanceEvent[]>();
 
-  for (const event of events) {
-    const key = `${event.userId}__${event.date}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(event);
+  // Determine date range boundaries
+  let start = startDateStr ? parseISO(startDateStr) : new Date();
+  let end = endDateStr ? parseISO(endDateStr) : new Date();
+
+  if (!startDateStr || !endDateStr) {
+    const allDates: string[] = [];
+    events.forEach((e) => allDates.push(e.date));
+    incidences.forEach((i) => allDates.push(i.date));
+    if (allDates.length > 0) {
+      allDates.sort();
+      if (!startDateStr) start = parseISO(allDates[0]);
+      if (!endDateStr) end = parseISO(allDates[allDates.length - 1]);
+    }
   }
 
+  const todayStr = getLocalDateString();
   const reports: DailyReport[] = [];
+  const usersList = Array.from(usersMap.values());
 
-  for (const [, dayEvents] of groups) {
-    const first = dayEvents[0];
-    const sorted = [...dayEvents].sort(
-      (a, b) => a.timestamp.seconds - b.timestamp.seconds
-    );
+  // Loop through every date in interval
+  let curr = new Date(start);
+  while (curr <= end) {
+    // Format YYYY-MM-DD
+    const dStr = format(curr, "yyyy-MM-dd");
+    const dayOfWeek = curr.getDay(); // 0 = Sunday
 
-    const findEvent = (type: AttendanceEvent["eventType"]) => {
-      const e = sorted.find((ev) => ev.eventType === type);
-      return e
-        ? format(new Date(e.timestamp.seconds * 1000), "HH:mm")
-        : null;
-    };
+    // Exclude Sundays from working days
+    if (dayOfWeek !== 0) {
+      const hol = getHolidayForDate(dStr, holidays);
 
-    const clockInEvent = sorted.find((ev) => ev.eventType === "clock_in");
-    const clockOutEvent = sorted.find((ev) => ev.eventType === "clock_out");
-    const lunchOutEvent = sorted.find((ev) => ev.eventType === "lunch_out");
-    const lunchInEvent = sorted.find((ev) => ev.eventType === "lunch_in");
+      for (const u of usersList) {
+        const key = `${u.userId}__${dStr}`;
+        const dayEvents = eventsMap.get(key) ?? [];
+        const sorted = [...dayEvents].sort(
+          (a, b) => (a.timestamp?.seconds ?? 0) - (b.timestamp?.seconds ?? 0)
+        );
 
-    let totalMinutes = 0;
-    let lunchMinutes = 0;
+        const findEventTime = (type: AttendanceEvent["eventType"]) => {
+          const e = sorted.find((ev) => ev.eventType === type);
+          return e && e.timestamp
+            ? format(new Date(e.timestamp.seconds * 1000), "HH:mm")
+            : null;
+        };
 
-    if (clockInEvent && clockOutEvent) {
-      totalMinutes = differenceInMinutes(
-        new Date(clockOutEvent.timestamp.seconds * 1000),
-        new Date(clockInEvent.timestamp.seconds * 1000)
-      );
+        const clockInEvent = sorted.find((ev) => ev.eventType === "clock_in");
+        const clockOutEvent = sorted.find((ev) => ev.eventType === "clock_out");
+        const lunchOutEvent = sorted.find((ev) => ev.eventType === "lunch_out");
+        const lunchInEvent = sorted.find((ev) => ev.eventType === "lunch_in");
+
+        let totalMinutes = 0;
+        let lunchMinutes = 0;
+
+        if (clockInEvent && clockOutEvent) {
+          totalMinutes = differenceInMinutes(
+            new Date(clockOutEvent.timestamp.seconds * 1000),
+            new Date(clockInEvent.timestamp.seconds * 1000)
+          );
+        }
+
+        if (lunchOutEvent && lunchInEvent) {
+          lunchMinutes = differenceInMinutes(
+            new Date(lunchInEvent.timestamp.seconds * 1000),
+            new Date(lunchOutEvent.timestamp.seconds * 1000)
+          );
+        }
+
+        let workedMinutes = Math.max(0, totalMinutes - lunchMinutes);
+        const dayIncs = incMap.get(key) ?? [];
+
+        const hasVacation = dayIncs.some(
+          (i) => i.type === "vacation" && i.status !== "rejected"
+        );
+        const hasMedicalLeave = dayIncs.some(
+          (i) => i.type === "medical_leave" && i.status !== "rejected"
+        );
+
+        let status: DailyStatus = "absent";
+        const isPastDay = dStr < todayStr;
+
+        if (hol) {
+          status = "holiday";
+        } else if (hasVacation) {
+          status = "vacation";
+        } else if (hasMedicalLeave) {
+          status = "medical_leave";
+        } else if (clockInEvent && clockOutEvent) {
+          status = "complete";
+        } else if (clockInEvent && !clockOutEvent) {
+          if (isPastDay) {
+            // Past day with clock-in but missing clock-out -> Salida no confirmada
+            status = "unconfirmed_out";
+            workedMinutes = 0; // Do not count unconfirmed hours as extra hours
+          } else {
+            // Today in progress -> Incompleto / En curso
+            status = "incomplete";
+          }
+        } else {
+          // No clock-in on a working day (and no holiday/vacation/medical_leave) -> ABSENT
+          status = "absent";
+        }
+
+        reports.push({
+          date: dStr,
+          userId: u.userId,
+          userName: u.userName,
+          userEmail: u.userEmail,
+          clockIn: findEventTime("clock_in"),
+          lunchOut: findEventTime("lunch_out"),
+          lunchIn: findEventTime("lunch_in"),
+          clockOut: findEventTime("clock_out"),
+          totalMinutes,
+          lunchMinutes,
+          workedMinutes,
+          status,
+          holidayName: hol?.name,
+          incidences: dayIncs,
+        });
+      }
     }
 
-    if (lunchOutEvent && lunchInEvent) {
-      lunchMinutes = differenceInMinutes(
-        new Date(lunchInEvent.timestamp.seconds * 1000),
-        new Date(lunchOutEvent.timestamp.seconds * 1000)
-      );
-    }
-
-    const workedMinutes = totalMinutes - lunchMinutes;
-    const incKey = `${first.userId}__${first.date}`;
-    const dayIncs = incMap.get(incKey) ?? [];
-
-    // Check special statuses: Holiday, Vacation, Medical Leave
-    const hol = getHolidayForDate(first.date, holidays);
-    const hasVacation = dayIncs.some(
-      (i) => i.type === "vacation" && i.status !== "rejected"
-    );
-    const hasMedicalLeave = dayIncs.some(
-      (i) => i.type === "medical_leave" && i.status !== "rejected"
-    );
-
-    let status: DailyStatus = "absent";
-    if (hol) {
-      status = "holiday";
-    } else if (hasVacation) {
-      status = "vacation";
-    } else if (hasMedicalLeave) {
-      status = "medical_leave";
-    } else if (clockInEvent && clockOutEvent) {
-      status = "complete";
-    } else if (clockInEvent) {
-      status = "incomplete";
-    }
-
-    reports.push({
-      date: first.date,
-      userId: first.userId,
-      userName: first.userName,
-      userEmail: first.userEmail,
-      clockIn: findEvent("clock_in"),
-      lunchOut: findEvent("lunch_out"),
-      lunchIn: findEvent("lunch_in"),
-      clockOut: findEvent("clock_out"),
-      totalMinutes,
-      lunchMinutes,
-      workedMinutes,
-      status,
-      holidayName: hol?.name,
-      incidences: dayIncs,
-    });
+    curr = addDays(curr, 1);
   }
 
   return reports.sort((a, b) =>
-    `${a.date}${a.userName}`.localeCompare(`${b.date}${b.userName}`)
+    `${b.date}${a.userName}`.localeCompare(`${a.date}${b.userName}`)
   );
 }
 
@@ -179,6 +249,7 @@ export function aggregateSummaryReports(
         daysVacation: 0,
         daysMedicalLeave: 0,
         daysHoliday: 0,
+        daysUnconfirmedOut: 0,
         totalWorkedHours: 0,
         averageDailyHours: 0,
         lateArrivals: 0,
@@ -200,6 +271,12 @@ export function aggregateSummaryReports(
       // Early departure: clock-out before 16:55
       if (report.clockOut && report.clockOut < "16:55") {
         summary.earlyDepartures++;
+      }
+    } else if (report.status === "unconfirmed_out") {
+      summary.daysPresent++; // Marked present for checking in
+      summary.daysUnconfirmedOut = (summary.daysUnconfirmedOut || 0) + 1;
+      if (report.clockIn && report.clockIn > "09:05") {
+        summary.lateArrivals++;
       }
     } else if (report.status === "vacation") {
       summary.daysVacation++;

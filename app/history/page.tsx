@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { subscribeToUserHistory, AttendanceEvent, deriveStatus } from "@/lib/attendance";
+import { subscribeToUserHistory, AttendanceEvent, deriveStatus, getLocalDateString } from "@/lib/attendance";
 import { minutesToHHMM } from "@/lib/reports";
 
 const eventIcons: Record<string, React.ReactNode> = {
@@ -55,6 +55,7 @@ export default function HistoryPage() {
   }, {} as Record<string, AttendanceEvent[]>);
 
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+  const todayStr = getLocalDateString();
 
   if (authLoading || !user) {
     return (
@@ -90,7 +91,11 @@ export default function HistoryPage() {
               const dayEvents = byDate[date].sort(
                 (a, b) => a.timestamp.seconds - b.timestamp.seconds
               );
-              const status = deriveStatus(dayEvents);
+              let status = deriveStatus(dayEvents);
+              const isPastDay = date < todayStr;
+              if (isPastDay && (status === "clocked_in" || status === "on_lunch")) {
+                status = "unconfirmed_out" as any;
+              }
 
               const clockIn = dayEvents.find((e) => e.eventType === "clock_in");
               const clockOut = dayEvents.find((e) => e.eventType === "clock_out");
@@ -120,11 +125,13 @@ export default function HistoryPage() {
                         variant={
                           status === "clocked_out" ? "success" :
                           status === "clocked_in" ? "info" :
+                          (status as string) === "unconfirmed_out" ? "warning" :
                           status === "on_lunch" ? "warning" : "muted"
                         }
                       >
                         {status === "clocked_out" ? "Completo" :
                          status === "clocked_in" ? "En Curso" :
+                         (status as string) === "unconfirmed_out" ? "Salida no confirmada" :
                          status === "on_lunch" ? "En Comida" : "Incompleto"}
                       </Badge>
                     </div>
