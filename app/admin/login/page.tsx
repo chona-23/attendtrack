@@ -60,9 +60,11 @@ export default function AdminLoginPage() {
         } catch {
           // Client side fallback for root admin email/password matching
           const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "nachoyal@gmail.com";
+          const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_";
+
           if (
-            email.trim().toLowerCase() === adminEmail.toLowerCase() ||
-            email.trim().toLowerCase() === "nachoyal@gmail.com"
+            email.trim().toLowerCase() === adminEmail.toLowerCase() &&
+            password === adminPassword
           ) {
             authenticated = true;
           }

@@ -11,6 +11,14 @@ export default function RootPage() {
   useEffect(() => {
     if (loading) return;
 
+    if (typeof window !== "undefined") {
+      const pathname = window.location.pathname;
+      if (pathname.startsWith("/admin")) {
+        window.location.href = pathname;
+        return;
+      }
+    }
+
     if (!user) {
       router.replace("/login");
       return;

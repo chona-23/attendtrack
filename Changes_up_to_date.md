@@ -185,3 +185,61 @@ This document maintains the complete, comprehensive, and chronological record of
   1. `npm run build`
   2. `git push origin main`
   3. `npx firebase-tools deploy --only hosting`
+
+---
+
+### 14. Infinite Loading Fix on Auth Restoration (`/dashboard`)
+* **Date & Timestamp:** Thursday, September 24, 2026 — 14:30:00 (`2026-09-24T14:30:00-06:00`)
+* **User Issue / Request:** Navigating to or refreshing `https://testchecker-4caeb.firebaseapp.com/dashboard` (or `http://localhost:3000/dashboard`) would hang indefinitely showing a loading spinner.
+* **Root Cause:** In [`lib/auth-context.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/lib/auth-context.tsx), the `onAuthStateChanged` callback executed `await getDoc(doc(db, "users", firebaseUser.uid))` without exception handling (`try/catch`). If Firestore network requests delayed, stalled, or threw permission/offline errors, execution exited the callback before reaching `setLoading(false)`, leaving `loading = true` indefinitely.
+* **Implementation Summary:** Wrapped user profile fetching in a `try/catch` block and added a 3-second safety timeout fallback (`safetyTimer`) within `AuthProvider`.
+* **Key Adjustments Applied:**
+  1. [`lib/auth-context.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/lib/auth-context.tsx): Wrapped `getDoc` call in `try / catch` so any network errors log gracefully without preventing `setLoading(false)`.
+  2. [`lib/auth-context.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/lib/auth-context.tsx): Added a 3000ms safety timeout that guarantees `setLoading(false)` executes even under slow or interrupted network conditions.
+
+---
+
+### 15. Seamless Client Navigation & Full-Page Refresh Elimination (`/dashboard` <-> `/history` <-> `/profile`)
+* **Date & Timestamp:** Thursday, September 24, 2026 — 14:49:00 (`2026-09-24T14:49:00-06:00`)
+* **User Issue / Request:** Navigating between worker profile sections (e.g., from `/history` back to `/dashboard` or `/profile`) caused a full-page refresh/flicker and brief unmounting of the entire interface.
+* **Root Cause:**
+  1. In [`components/layout/AppShell.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/components/layout/AppShell.tsx), the navigation link for "Inicio" was configured as `href: "/"`. Clicking "Inicio" routed to `RootPage` ([`app/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/page.tsx)), which displayed a full-screen loading spinner and executed `router.replace("/dashboard")`, creating a jarring redirect loop.
+  2. In [`app/dashboard/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/dashboard/page.tsx), [`app/history/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/history/page.tsx), and [`app/profile/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/profile/page.tsx), loading state checks returned standalone full-screen spinners outside of [`AppShell`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/components/layout/AppShell.tsx). This caused the sidebar and outer layout to unmount and remount on every route transition.
+* **Implementation Summary:**
+  1. Pointed the "Inicio" navigation link directly to `/dashboard` in `AppShell`.
+  2. Wrapped loading indicator states inside `<AppShell>` across all worker pages so the persistent sidebar, header, and frame remain mounted during SPA route transitions.
+* **Key Adjustments Applied:**
+  1. [`components/layout/AppShell.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/components/layout/AppShell.tsx): Changed `navItems` link from `href: "/"` to `href: "/dashboard"` and updated active route matching logic for both Sidebar and BottomNav.
+  2. [`app/dashboard/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/dashboard/page.tsx): Wrapped initial `loading` check inside `<AppShell>`.
+  3. [`app/history/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/history/page.tsx): Wrapped initial `authLoading` check inside `<AppShell>`.
+  4. [`app/profile/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/profile/page.tsx): Wrapped initial `loading` check inside `<AppShell>`.
+
+---
+
+### 16. Admin Route Direct Access Fix (`/admin/login` -> `/login` Fallback Resolution)
+* **Date & Timestamp:** Thursday, September 24, 2026 — 15:07:00 (`2026-09-24T15:07:00-06:00`)
+* **User Issue / Request:** Navigating directly via browser URL bar or refreshing `https://testchecker-4caeb.firebaseapp.com/admin/login` redirected users to `https://testchecker-4caeb.firebaseapp.com/login` instead of rendering the Admin Login console.
+* **Root Cause:**
+  1. [`firebase.json`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/firebase.json) was missing `"cleanUrls": true`. When accessing `/admin/login` directly without `.html`, Firebase Hosting failed to map the path to `out/admin/login.html` and triggered the fallback rewrite rule `{ "source": "**", "destination": "/index.html" }`.
+  2. The fallback rendered `RootPage` ([`app/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/page.tsx)), which evaluated `!user` for worker authentication and redirected the browser to `/login`.
+* **Implementation Summary:**
+  1. Enabled `"cleanUrls": true` in `firebase.json` so Firebase Hosting maps clean URLs directly to static HTML export files.
+  2. Updated `RootPage` ([`app/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/page.tsx)) to detect if the target URL path starts with `/admin` and avoid redirecting to employee `/login`.
+* **Key Adjustments Applied:**
+  1. [`firebase.json`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/firebase.json): Added `"cleanUrls": true` under `hosting` configuration.
+  2. [`app/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/page.tsx): Added `window.location.pathname.startsWith("/admin")` check to preserve admin route targets upon static fallthrough.
+
+---
+
+### 17. Admin Login Password Verification Fix
+* **Date & Timestamp:** Thursday, September 24, 2026 — 15:25:00 (`2026-09-24T15:25:00-06:00`)
+* **User Issue / Request:** On `/admin/login/`, entering any arbitrary password for `nachoyal@gmail.com` (such as `1234567890`) was bypassing authentication and granting admin access instead of requiring the designated admin password (`_88122300_`).
+* **Root Cause:** In [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx), when client-side Firebase Auth authentication failed or was skipped in static hosting mode, the fallback `catch` block evaluated `email.trim().toLowerCase() === "nachoyal@gmail.com"` without validating `password === adminPassword`. This allowed any input string in the password field to set `authenticated = true`.
+* **Implementation Summary:** Enforced strict dual-credential matching (`email` AND `password`) in the static hosting fallback block of `AdminLoginPage`.
+* **Key Adjustments Applied:**
+  1. [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx): Defined `adminPassword` (`process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_"`) and updated fallback logic to check `email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword`.
+  2. Any incorrect password attempt now cleanly triggers `"Credenciales de administrador inválidas."` and blocks authorization.
+
+
+
+

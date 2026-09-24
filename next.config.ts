@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
+  trailingSlash: true,
   images: { unoptimized: true },
   // Required for Firebase Admin and otplib to work in Node.js runtime (not Edge)
   serverExternalPackages: ["otplib", "firebase-admin"],

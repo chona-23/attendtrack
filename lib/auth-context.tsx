@@ -81,13 +81,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [needs2FASetup, setNeeds2FASetup] = useState(false);
 
   useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        const profileDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (profileDoc.exists()) {
-          setProfile(profileDoc.data() as UserProfile);
+        try {
+          const profileDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (profileDoc.exists()) {
+            const data = profileDoc.data() as UserProfile;
+            setProfile(data);
+            if (data.totpEnabled === false) {
+              setNeeds2FASetup(true);
+              needs2FASetupRef.current = true;
+            }
+          }
+        } catch (err) {
+          console.warn("AuthProvider profile fetch error:", err);
         }
       } else {
         setProfile(null);
@@ -95,10 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setNeeds2FASetup(false);
       }
 
+      clearTimeout(safetyTimer);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      clearTimeout(safetyTimer);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

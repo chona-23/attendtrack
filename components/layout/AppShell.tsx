@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 const navItems = [
-  { href: "/", label: "Inicio", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/history", label: "Historial", icon: History },
   { href: "/profile", label: "Perfil", icon: User },
 ];
@@ -46,7 +46,7 @@ function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href === "/dashboard" && pathname === "/");
           return (
             <Link
               key={href}
@@ -112,7 +112,7 @@ function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-[#1e293b] border-t border-slate-200 dark:border-slate-700 transition-colors duration-200 safe-area-pb">
       <div className="flex items-center justify-around px-2 py-2">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href === "/dashboard" && pathname === "/");
           return (
             <Link
               key={href}
