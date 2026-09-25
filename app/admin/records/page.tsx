@@ -21,6 +21,7 @@ import {
 import { AdminShell } from "@/components/layout/AdminShell";
 import { Badge } from "@/components/ui/Badge";
 import { subscribeToAllRecords, AttendanceEvent, getLocalDateString } from "@/lib/attendance";
+import { subscribeToAllIncidences, IncidenceRecord } from "@/lib/incidences";
 
 const eventConfig: Record<
   string,
@@ -46,6 +47,7 @@ interface UserRecordGroup {
 
 export default function AdminRecordsPage() {
   const [records, setRecords] = useState<AttendanceEvent[]>([]);
+  const [incidences, setIncidences] = useState<IncidenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("");
@@ -56,11 +58,17 @@ export default function AdminRecordsPage() {
 
   useEffect(() => {
     setLoading(true);
-    const unsub = subscribeToAllRecords(startDate, endDate, (evs) => {
+    const unsubRec = subscribeToAllRecords(startDate, endDate, (evs) => {
       setRecords(evs);
       setLoading(false);
     });
-    return unsub;
+    const unsubInc = subscribeToAllIncidences((incList) => {
+      setIncidences(incList);
+    });
+    return () => {
+      unsubRec();
+      unsubInc();
+    };
   }, [startDate, endDate]);
 
   const toggleExpand = (userId: string) => {
@@ -90,7 +98,12 @@ export default function AdminRecordsPage() {
       !search ||
       r.userName?.toLowerCase().includes(q) ||
       r.userEmail?.toLowerCase().includes(q);
-    const matchType = !filterType || r.eventType === filterType;
+    const matchType =
+      !filterType ||
+      filterType === "absent" ||
+      filterType === "vacation" ||
+      filterType === "medical_leave" ||
+      r.eventType === filterType;
     return matchSearch && matchType;
   });
 
@@ -137,7 +150,26 @@ export default function AdminRecordsPage() {
     group.latestEvent = latestOverall;
     group.firstClockIn = firstClockInToday || [...sorted].reverse().find((e) => e.eventType === "clock_in") || null;
 
-    if (latestToday) {
+    // Check if employee has an approved vacation or medical leave active today
+    const userInc = incidences.find(
+      (inc) =>
+        inc.userId === group.userId &&
+        inc.status === "approved" &&
+        (inc.date === todayDateStr ||
+          (inc.startDate && inc.endDate && todayDateStr >= inc.startDate && todayDateStr <= inc.endDate))
+    );
+
+    if (userInc) {
+      if (userInc.type === "vacation") {
+        group.status = "vacation" as any;
+        group.statusLabel = "En Vacaciones 🏖️";
+        group.statusVariant = "info";
+      } else if (userInc.type === "medical_leave") {
+        group.status = "medical_leave" as any;
+        group.statusLabel = "Incapacidad Médica 🏥";
+        group.statusVariant = "warning";
+      }
+    } else if (latestToday) {
       if (latestToday.eventType === "clock_in" || latestToday.eventType === "lunch_in") {
         group.status = "clocked_in";
         group.statusLabel = "Entrada Registrada Hoy";
@@ -152,8 +184,8 @@ export default function AdminRecordsPage() {
         group.statusVariant = "muted";
       }
     } else {
-      group.status = "idle";
-      group.statusLabel = "Sin registro hoy";
+      group.status = "absent" as any;
+      group.statusLabel = "Sin registro hoy (Ausente)";
       group.statusVariant = "muted";
     }
 
@@ -162,6 +194,15 @@ export default function AdminRecordsPage() {
 
   // Sort user groups alphabetically by name
   userGroupsList.sort((a, b) => a.userName.localeCompare(b.userName));
+
+  // Filter groups by state / event type filter
+  const filteredUserGroups = userGroupsList.filter((group) => {
+    if (!filterType) return true;
+    if (filterType === "absent") return group.status === ("absent" as any) || group.status === "idle";
+    if (filterType === "vacation") return group.status === ("vacation" as any);
+    if (filterType === "medical_leave") return group.status === ("medical_leave" as any);
+    return group.events.some((e) => e.eventType === filterType);
+  });
 
   return (
     <AdminShell>
@@ -172,7 +213,7 @@ export default function AdminRecordsPage() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Registros de Asistencia</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
               {viewMode === "grouped"
-                ? `${userGroupsList.length} empleado${userGroupsList.length !== 1 ? "s" : ""} · ${filteredRecords.length} eventos en total`
+                ? `${filteredUserGroups.length} empleado${filteredUserGroups.length !== 1 ? "s" : ""} · ${filteredRecords.length} eventos en total`
                 : `${filteredRecords.length} eventos en total · actualizaciones en vivo`}
             </p>
           </div>
@@ -224,11 +265,18 @@ export default function AdminRecordsPage() {
             onChange={(e) => setFilterType(e.target.value)}
             className="py-2.5 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-xs cursor-pointer"
           >
-            <option value="">Todos los eventos</option>
-            <option value="clock_in">Entrada</option>
-            <option value="lunch_out">Salida a Comida</option>
-            <option value="lunch_in">Regreso de Comida</option>
-            <option value="clock_out">Salida</option>
+            <option value="">Todos los eventos y estados</option>
+            <optgroup label="Eventos de Asistencia">
+              <option value="clock_in">Entrada</option>
+              <option value="lunch_out">Salida a Comida</option>
+              <option value="lunch_in">Regreso de Comida</option>
+              <option value="clock_out">Salida</option>
+            </optgroup>
+            <optgroup label="Estados e Incidencias">
+              <option value="absent">Ausente</option>
+              <option value="vacation">Vacaciones</option>
+              <option value="medical_leave">Incapacidad Médica</option>
+            </optgroup>
           </select>
 
           <div className="flex gap-2">
@@ -250,12 +298,12 @@ export default function AdminRecordsPage() {
         </div>
 
         {/* Global Controls when in Grouped Mode */}
-        {viewMode === "grouped" && userGroupsList.length > 0 && (
+        {viewMode === "grouped" && filteredUserGroups.length > 0 && (
           <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400">
             <span>Haz clic en cualquier empleado para expandir/colapsar su historial de eventos.</span>
             <div className="flex gap-3">
               <button
-                onClick={() => expandAll(userGroupsList.map((g) => g.userId))}
+                onClick={() => expandAll(filteredUserGroups.map((g) => g.userId))}
                 className="hover:text-blue-600 dark:hover:text-blue-400 underline cursor-pointer"
               >
                 Expandir todo
@@ -278,7 +326,7 @@ export default function AdminRecordsPage() {
               <div key={i} className="h-16 bg-slate-200 dark:bg-slate-800/60 rounded-2xl animate-pulse" />
             ))}
           </div>
-        ) : filteredRecords.length === 0 ? (
+        ) : filteredRecords.length === 0 && filteredUserGroups.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 rounded-2xl">
             <FileText size={36} className="mx-auto mb-3 opacity-40" />
             <p className="font-medium text-slate-700 dark:text-slate-300">No se encontraron registros de asistencia</p>
@@ -287,7 +335,7 @@ export default function AdminRecordsPage() {
         ) : viewMode === "grouped" ? (
           /* GROUPED BY EMPLOYEE VIEW */
           <div className="space-y-3">
-            {userGroupsList.map((group) => {
+            {filteredUserGroups.map((group) => {
               const isExpanded = expandedUserIds.has(group.userId);
               const latestCfg = group.latestEvent ? eventConfig[group.latestEvent.eventType] : null;
 

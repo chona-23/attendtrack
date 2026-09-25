@@ -240,6 +240,28 @@ This document maintains the complete, comprehensive, and chronological record of
   1. [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx): Defined `adminPassword` (`process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_"`) and updated fallback logic to check `email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword`.
   2. Any incorrect password attempt now cleanly triggers `"Credenciales de administrador inválidas."` and blocks authorization.
 
+---
+
+### 18. Incidences Filter Tab ("Vacaciones/Incapacidad"), Incidences Search Bar & Attendance Record Status Filters
+* **Date & Timestamp:** Friday, September 25, 2026 — 10:03:00 (`2026-09-25T10:03:00-06:00`)
+* **User Issue / Request:**
+  1. Add a dedicated section/tab at `/admin/incidences/` to filter by **"Vacaciones/Incapacidad"**, displaying only records for employees on Vacation or Medical Leave.
+  2. Add the same live search input functionality as featured in "Registros de Asistencia" and "Empleados".
+  3. At `/admin/records/` ("Registros de Asistencia"), add new state status filters for **"Ausente"**, **"Vacaciones"**, and **"Incapacidad"**.
+* **Implementation Summary:**
+  1. Built `"Vacaciones / Incapacidad 🏖️"` tab in Admin Incidences and integrated real-time text search filtering across employee name, email, and notes.
+  2. Integrated real-time approved incidence tracking into Admin Attendance Records (`/admin/records/`) and added `"Ausente"`, `"Vacaciones"`, and `"Incapacidad Médica"` filter options to the event/status dropdown menu.
+* **Key Adjustments Applied:**
+  1. [`app/admin/incidences/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/incidences/page.tsx):
+     - Added `{ label: "Vacaciones / Incapacidad 🏖️", value: "vacation_medical" }` to `STATUS_TABS`.
+     - Integrated `search` state and `Search` icon input bar filtering records by `userName`, `userEmail`, `notes`, or `type`.
+     - Implemented `vacation_medical` tab filter returning grouped periods where `p.type === "vacation" || p.type === "medical_leave"`.
+  2. [`app/admin/records/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/records/page.tsx):
+     - Added `subscribeToAllIncidences` real-time listener to cross-reference active approved time-off requests.
+     - Updated worker status evaluation to automatically detect `"vacation"` (`En Vacaciones 🏖️`), `"medical_leave"` (`Incapacidad Médica 🏥`), and `"absent"` (`Sin registro hoy (Ausente)`).
+     - Added `<optgroup label="Estados e Incidencias">` to dropdown select with options for `absent` ("Ausente"), `vacation` ("Vacaciones"), and `medical_leave` ("Incapacidad Médica").
+
+
 
 
 

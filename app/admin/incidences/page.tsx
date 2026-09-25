@@ -12,6 +12,8 @@ import {
   Calendar,
   Plus,
   Trash2,
+  Search,
+  Palmtree,
 } from "lucide-react";
 import { AdminShell } from "@/components/layout/AdminShell";
 import {
@@ -28,9 +30,10 @@ import {
   HolidayRecord,
 } from "@/lib/holidays";
 
-const STATUS_TABS: { label: string; value: IncidenceStatus | "all" | "holidays" }[] = [
+const STATUS_TABS: { label: string; value: IncidenceStatus | "all" | "holidays" | "vacation_medical" }[] = [
   { label: "Pendientes", value: "pending" },
   { label: "Todas", value: "all" },
+  { label: "Vacaciones / Incapacidad 🏖️", value: "vacation_medical" },
   { label: "Aprobadas", value: "approved" },
   { label: "Rechazadas", value: "rejected" },
   { label: "Días Festivos 🌟", value: "holidays" },
@@ -60,7 +63,8 @@ export interface GroupedIncidencePeriod {
 export default function AdminIncidencesPage() {
   const [incidences, setIncidences] = useState<IncidenceRecord[]>([]);
   const [holidays, setHolidays] = useState<HolidayRecord[]>([]);
-  const [tab, setTab] = useState<IncidenceStatus | "all" | "holidays">("pending");
+  const [tab, setTab] = useState<IncidenceStatus | "all" | "holidays" | "vacation_medical">("pending");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -162,11 +166,30 @@ export default function AdminIncidencesPage() {
     }
   };
 
-  const filtered = tab === "all"
-    ? groupedPeriods
-    : tab === "holidays"
-    ? []
-    : groupedPeriods.filter((p) => p.status === tab);
+  // Filter periods by search query
+  const searchedPeriods = useMemo(() => {
+    if (!search.trim()) return groupedPeriods;
+    const q = search.toLowerCase();
+    return groupedPeriods.filter((p) => {
+      const typeLabel = INCIDENCE_LABELS[p.type as keyof typeof INCIDENCE_LABELS] || p.type;
+      return (
+        p.userName?.toLowerCase().includes(q) ||
+        p.userEmail?.toLowerCase().includes(q) ||
+        p.notes?.toLowerCase().includes(q) ||
+        typeLabel.toLowerCase().includes(q)
+      );
+    });
+  }, [groupedPeriods, search]);
+
+  // Filter periods by tab selection
+  const filtered = useMemo(() => {
+    if (tab === "all") return searchedPeriods;
+    if (tab === "holidays") return [];
+    if (tab === "vacation_medical") {
+      return searchedPeriods.filter((p) => p.type === "vacation" || p.type === "medical_leave");
+    }
+    return searchedPeriods.filter((p) => p.status === tab);
+  }, [tab, searchedPeriods]);
 
   const pendingCount = groupedPeriods.filter((p) => p.status === "pending").length;
 
@@ -190,32 +213,47 @@ export default function AdminIncidencesPage() {
           </div>
         </div>
 
-        {/* Status filter tabs */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {STATUS_TABS.map((t) => {
-            const count = t.value === "all"
-              ? groupedPeriods.length
-              : t.value === "holidays"
-              ? holidays.length
-              : groupedPeriods.filter((p) => p.status === t.value).length;
-            return (
-              <button
-                key={t.value}
-                onClick={() => setTab(t.value)}
-                className={[
-                  "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all border cursor-pointer",
-                  tab === t.value
-                    ? "bg-slate-900 dark:bg-slate-700 text-white dark:text-slate-100 border-slate-900 dark:border-slate-600 shadow-xs"
-                    : "bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200",
-                ].join(" ")}
-              >
-                {t.label}
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${tab === t.value ? "bg-slate-700 dark:bg-slate-600 text-white dark:text-slate-200" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-500"}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        {/* Search Bar & Status filter tabs */}
+        <div className="space-y-3">
+          <div className="relative max-w-md">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por empleado, correo o tipo de incidencia…"
+              style={{ paddingLeft: "2.5rem" }}
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 shadow-xs"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {STATUS_TABS.map((t) => {
+              const count = t.value === "all"
+                ? searchedPeriods.length
+                : t.value === "holidays"
+                ? holidays.length
+                : t.value === "vacation_medical"
+                ? searchedPeriods.filter((p) => p.type === "vacation" || p.type === "medical_leave").length
+                : searchedPeriods.filter((p) => p.status === t.value).length;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => setTab(t.value)}
+                  className={[
+                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all border cursor-pointer",
+                    tab === t.value
+                      ? "bg-slate-900 dark:bg-slate-700 text-white dark:text-slate-100 border-slate-900 dark:border-slate-600 shadow-xs"
+                      : "bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200",
+                  ].join(" ")}
+                >
+                  {t.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${tab === t.value ? "bg-slate-700 dark:bg-slate-600 text-white dark:text-slate-200" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-500"}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* HOLIDAYS TAB */}
