@@ -261,6 +261,40 @@ This document maintains the complete, comprehensive, and chronological record of
      - Updated worker status evaluation to automatically detect `"vacation"` (`En Vacaciones 🏖️`), `"medical_leave"` (`Incapacidad Médica 🏥`), and `"absent"` (`Sin registro hoy (Ausente)`).
      - Added `<optgroup label="Estados e Incidencias">` to dropdown select with options for `absent` ("Ausente"), `vacation` ("Vacaciones"), and `medical_leave` ("Incapacidad Médica").
 
+---
+
+### 19. 2FA Setup Flow Redirection, Employee Soft-Delete / Re-Enable, Strict Admin Auth & 2FA Reset Option
+* **Date & Timestamp:** Sunday, October 4, 2026 — 20:33:00 (`2026-10-04T20:33:00-06:00`)
+* **User Issue / Request:**
+  1. At `/setup-2fa/`: After finishing the 2FA setup process, the page loops back to `/setup-2fa` instead of redirecting to `/login`.
+  2. Under `/admin/employees/`: Add an option to soft-delete/disable users while guaranteeing all database records (attendance events, incidences) persist. Also add an option to re-enable ("Habilitar") disabled employees.
+  3. At `/admin/login`: `/admin` was accepting any password instead of strictly authenticating against the admin user's password (`_88122300_`).
+  4. Inside `/verify-2fa/`: Add an option so users can re-enable or re-activate 2FA in case they changed their phone or deleted their authenticator account by mistake.
+* **Root Cause & Rationale:**
+  1. `setup-2fa` post-verification handler was previously routing to `/dashboard` directly without clearing session state or signing out, causing state loops when returning to `/setup-2fa`.
+  2. Employee management lacked explicit status toggles and filtering for `disabled` state while preserving historical Firestore attendance and incidence collections.
+  3. Client fallback in `/admin/login` was permitting valid Firebase Auth user log-ins to grant admin access without verifying that the entered password matched the designated root admin password (`_88122300_`).
+  4. `verify-2fa` lacked a user-facing reset workflow to clear stale `totpSecret` / `totpEnabled` flags when authenticator apps were lost or replaced.
+* **Implementation Summary:**
+  1. Updated `app/setup-2fa/page.tsx` so completing TOTP setup sets `totpEnabled: true`, signs out current auth session, and redirects to `/login?setupSuccess=true`. Added `setupSuccess` banner in `app/login/page.tsx`.
+  2. Updated `app/admin/employees/page.tsx` with employee `disabled` status flags, a "Deshabilitar" button (soft-delete preserving all database records), a "Habilitar" button (re-activating users), and status filter tabs ("Todos", "Activos", "Deshabilitados").
+  3. Updated `app/admin/login/page.tsx` to strictly enforce admin password verification (`_88122300_` / `ADMIN_PASSWORD`), rejecting invalid attempts with `"Credenciales de administrador inválidas."`.
+  4. Added a "Re-configurar 2FA" action on `/verify-2fa` (`app/verify-2fa/page.tsx`) allowing employees to reset their TOTP secret and safely re-scan a new QR code on `/setup-2fa`.
+* **Key Adjustments Applied:**
+  1. [`app/setup-2fa/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/setup-2fa/page.tsx):
+     - Added immediate redirect to `/login` if `profile.totpEnabled` is already active.
+     - Updated completion step to display success banner, sign out, and route to `/login?setupSuccess=true`.
+  2. [`app/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/login/page.tsx):
+     - Added `setupSuccess` query param detection and success alert banner.
+  3. [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx):
+     - Added `disabled?: boolean` to `Employee` model.
+     - Added `handleReEnable` handler and updated modal footer with "Habilitar" and "Deshabilitar" buttons.
+     - Added status filter bar ("Todos", "Activos", "Deshabilitados") and "Deshabilitado" badges.
+  4. [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx):
+     - Strictly enforced dual check on admin email (`nachoyal@gmail.com`) and admin password (`_88122300_`), blocking arbitrary password logins.
+  5. [`app/verify-2fa/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/verify-2fa/page.tsx):
+     - Added `handleReset2FA` method and UI confirmation block allowing employees to clear TOTP secret and navigate to `/setup-2fa`.
+
 
 
 

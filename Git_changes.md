@@ -1,5 +1,30 @@
 # Git Commit Changes Log
 
+## Pending Uncommitted Local Changes (Awaiting User Verification & Approval)
+* **Date & Timestamp:** Sunday, October 4, 2026 — 20:34:00 (`2026-10-04T20:34:00-06:00`)
+* **Branch:** `main` (Local changes applied; pending git commit, sync & firebase deploy)
+* **Status:** Build verified clean with `npm run build` (20/20 static pages compiled, 0 errors).
+
+---
+
+### Summary of Pending Actions & Modified Files
+
+1. **Modified Files:**
+   - [`app/setup-2fa/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/setup-2fa/page.tsx): Updated completion handler to clear TOTP session state, sign out, and redirect to `/login?setupSuccess=true`. Added automatic redirect to `/login` if `totpEnabled` is already true.
+   - [`app/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/login/page.tsx): Added `setupSuccess` query param listener and green alert banner notifying employee that 2FA configuration completed.
+   - [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx): Added employee soft-delete button ("Deshabilitar") ensuring all database records persist, added re-enable button ("Habilitar"), added status badges ("Deshabilitado"), and status filter tabs ("Todos", "Activos", "Deshabilitados").
+   - [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx): Enforced strict root admin credential validation (`nachoyal@gmail.com` and `_88122300_`), rejecting any invalid password attempts.
+   - [`app/verify-2fa/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/verify-2fa/page.tsx): Added "Re-configurar 2FA" action and confirmation box for employees who changed phones or lost authenticator account access.
+   - [`Changes_up_to_date.md`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/Changes_up_to_date.md): Appended Section 19 documenting implementation plan, root causes, summary, and key adjustments.
+
+2. **Verification:**
+   - Executed `npm run build` — compiled and statically exported 20/20 pages with **0 errors**.
+
+3. **Production Deployment Guard:**
+   - Per explicit instruction, local changes are ready for testing and approval. Git sync and Firebase production deployment (`npx firebase-tools deploy --only hosting`) will be executed upon user confirmation.
+
+---
+
 ## Latest Commit: `bfd5622e`
 * **Date & Timestamp:** Friday, September 25, 2026 — 10:30:44 (`2026-09-25T10:30:44-06:00`)
 * **Branch:** `main` (synchronized with `origin/main`)

@@ -31,6 +31,10 @@ export default function Setup2FAPage() {
       router.replace("/login");
       return;
     }
+    if (profile?.totpEnabled) {
+      router.replace("/login");
+      return;
+    }
     const storageKey = `attendtrack_totp_${user.uid}`;
     let s = sessionStorage.getItem(storageKey);
     if (!s) {
@@ -109,7 +113,16 @@ export default function Setup2FAPage() {
       set2FAVerified(true);
       setStep("done");
 
-      setTimeout(() => router.push("/dashboard"), 2000);
+      setTimeout(async () => {
+        try {
+          const { signOut: authSignOut } = await import("firebase/auth");
+          const { auth: firebaseAuth } = await import("@/lib/firebase");
+          await authSignOut(firebaseAuth);
+        } catch (err) {
+          console.warn("Sign out after 2fa setup warning:", err);
+        }
+        router.push("/login?setupSuccess=true");
+      }, 2000);
     } catch (err: unknown) {
       console.error(err);
       const errMsg = (err as Error)?.message || "Error en la configuración. Intente de nuevo.";
@@ -127,7 +140,7 @@ export default function Setup2FAPage() {
             <CheckCircle2 size={40} className="text-emerald-500 dark:text-emerald-400" />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡2FA Habilitado!</h2>
-          <p className="text-slate-600 dark:text-slate-400">Redirigiendo a tu panel principal…</p>
+          <p className="text-slate-600 dark:text-slate-400">Configuración completada. Redirigiendo al inicio de sesión…</p>
         </div>
       </div>
     );

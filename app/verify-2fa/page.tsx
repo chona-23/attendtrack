@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, AlertCircle } from "lucide-react";
-import { doc, getDoc } from "firebase/firestore";
+import { Shield, AlertCircle, RefreshCw } from "lucide-react";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth-context";
@@ -17,6 +17,8 @@ export default function Verify2FAPage() {
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -31,6 +33,34 @@ export default function Verify2FAPage() {
       console.error("Sign out error:", err);
     } finally {
       router.replace("/login");
+    }
+  };
+
+  const handleReset2FA = async () => {
+    if (!user) return;
+    setResetting(true);
+    setError("");
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          totpEnabled: false,
+          totpSecret: "",
+          totpResetAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("2fa_verified");
+        sessionStorage.removeItem(`attendtrack_totp_${user.uid}`);
+      }
+      set2FAVerified(false);
+      router.push("/setup-2fa");
+    } catch (err) {
+      console.error("Reset 2FA error:", err);
+      setError("Error al restablecer la configuración de 2FA. Intente nuevamente.");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -157,15 +187,58 @@ export default function Verify2FAPage() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-slate-200 dark:border-white/10 text-center">
-            <button
-              type="button"
-              id="cancel-sign-out"
-              onClick={handleSignOut}
-              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              ← Cancelar y Cerrar Sesión
-            </button>
+          <div className="mt-5 pt-4 border-t border-slate-200 dark:border-white/10 text-center space-y-3">
+            {!showResetConfirm ? (
+              <button
+                type="button"
+                id="reset-2fa-btn"
+                onClick={() => setShowResetConfirm(true)}
+                className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center justify-center gap-1.5 mx-auto transition-colors cursor-pointer"
+              >
+                <RefreshCw size={13} />
+                ¿Cambiaste de teléfono o perdiste el código? Re-configurar 2FA
+              </button>
+            ) : (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-left animate-fade-in">
+                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                  <strong>Reconfigurar 2FA:</strong> Se desactivará la clave actual y podrás escanear un nuevo código QR.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    className="px-2.5 py-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    id="confirm-reset-2fa"
+                    onClick={handleReset2FA}
+                    disabled={resetting}
+                    className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {resetting ? (
+                      <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <RefreshCw size={12} />
+                    )}
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <button
+                type="button"
+                id="cancel-sign-out"
+                onClick={handleSignOut}
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                ← Cancelar y Cerrar Sesión
+              </button>
+            </div>
           </div>
         </div>
 

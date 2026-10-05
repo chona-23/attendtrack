@@ -8,7 +8,7 @@ import {
   Search, Users, RefreshCw, Mail, Clock,
   Pencil, X, Save, Trash2, AlertTriangle, Eye, EyeOff,
   KeyRound, User as UserIcon, Briefcase, Building2,
-  Timer, Zap, MonitorCheck,
+  Timer, Zap, MonitorCheck, CheckCircle2,
 } from "lucide-react";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { Badge } from "@/components/ui/Badge";
@@ -28,6 +28,7 @@ interface Employee {
   email: string;
   role: string;
   createdAt: string;
+  disabled?: boolean;
   lastEvent?: { eventType: string; timestamp: { seconds: number } };
   todayStatus?: string;
   // Work profile fields
@@ -241,6 +242,27 @@ function EditEmployeeModal({
       setConfirmDelete(false);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleReEnable = async () => {
+    setError("");
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, "users", employee.uid), { disabled: false });
+      try {
+        await fetch("/api/admin/employees", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: employee.uid, disabled: false }),
+        });
+      } catch {}
+      setSuccess("Usuario habilitado con éxito.");
+      setTimeout(() => { onSaved(); onClose(); }, 1200);
+    } catch (err: unknown) {
+      setError((err as Error).message ?? "Error al habilitar.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -511,7 +533,16 @@ function EditEmployeeModal({
               {saving ? "Guardando…" : "Guardar Cambios"}
             </button>
 
-            {!confirmDelete ? (
+            {employee.disabled ? (
+              <button
+                id="enable-employee-btn"
+                onClick={handleReEnable}
+                disabled={saving || deleting}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 size={15} /> Habilitar
+              </button>
+            ) : !confirmDelete ? (
               <button
                 id="delete-employee-btn"
                 onClick={() => setConfirmDelete(true)}
@@ -544,10 +575,17 @@ function EditEmployeeModal({
             )}
           </div>
 
+          {employee.disabled && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-1.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-3 py-2">
+              <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+              Este empleado se encuentra <strong>deshabilitado</strong>. Presione <strong>Habilitar</strong> para restaurar su acceso.
+            </p>
+          )}
+
           {confirmDelete && (
             <p className="text-xs text-rose-600 dark:text-rose-400 flex items-start gap-1.5 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl px-3 py-2">
               <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-              Esto <strong>deshabilitará</strong> el acceso del usuario. Los registros de asistencia e incidencias se <strong>conservan</strong>.
+              Esto <strong>deshabilitará</strong> el acceso del usuario. Los registros de asistencia e incidencias se <strong>conservan</strong> en la base de datos.
             </p>
           )}
         </div>
@@ -634,17 +672,25 @@ export default function AdminEmployeesPage() {
 
   useEffect(() => { loadEmployees(); }, []);
 
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
+
   useEffect(() => {
     const q = search.toLowerCase();
     setFiltered(
-      employees.filter(
-        (e) =>
+      employees.filter((e) => {
+        const matchesQuery =
           e.displayName?.toLowerCase().includes(q) ||
           e.email?.toLowerCase().includes(q) ||
-          e.project?.toLowerCase().includes(q)
-      )
+          e.project?.toLowerCase().includes(q);
+
+        if (!matchesQuery) return false;
+
+        if (statusFilter === "active") return !e.disabled;
+        if (statusFilter === "disabled") return Boolean(e.disabled);
+        return true;
+      })
     );
-  }, [search, employees]);
+  }, [search, statusFilter, employees]);
 
   const isRefreshing = mounted ? loading : false;
 
@@ -670,16 +716,41 @@ export default function AdminEmployeesPage() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, correo o proyecto…"
-            style={{ paddingLeft: "2.5rem" }}
-            className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-xs"
-          />
+        {/* Search & Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, correo o proyecto…"
+              style={{ paddingLeft: "2.5rem" }}
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-xs"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-full sm:w-auto shrink-0">
+            {(
+              [
+                { id: "all", label: "Todos" },
+                { id: "active", label: "Activos" },
+                { id: "disabled", label: "Deshabilitados" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={[
+                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex-1 sm:flex-none cursor-pointer",
+                  statusFilter === tab.id
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
+                ].join(" ")}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Employee List */}
@@ -692,7 +763,7 @@ export default function AdminEmployeesPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 rounded-2xl">
             <Users size={36} className="mx-auto mb-3 opacity-40" />
-            <p>{search ? "Ningún empleado coincide con tu búsqueda." : "Aún no hay empleados registrados."}</p>
+            <p>{search || statusFilter !== "all" ? "Ningún empleado coincide con tu búsqueda o filtro." : "Aún no hay empleados registrados."}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -702,7 +773,10 @@ export default function AdminEmployeesPage() {
               return (
                 <div
                   key={emp.uid}
-                  className="flex items-center gap-4 px-4 py-3.5 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs"
+                  className={[
+                    "flex items-center gap-4 px-4 py-3.5 bg-white dark:bg-slate-800/50 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs",
+                    emp.disabled ? "border-rose-200 dark:border-rose-900/40 opacity-75" : "border-slate-200 dark:border-slate-700",
+                  ].join(" ")}
                 >
                   {/* Avatar */}
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
@@ -711,7 +785,14 @@ export default function AdminEmployeesPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 dark:text-slate-200 truncate">{emp.displayName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-900 dark:text-slate-200 truncate">{emp.displayName}</p>
+                      {emp.disabled && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold border border-rose-300 dark:border-rose-800">
+                          Deshabilitado
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                         <Mail size={11} />

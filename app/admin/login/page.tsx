@@ -49,24 +49,42 @@ export default function AdminLoginPage() {
         // Ignored: fetch failed because API route doesn't exist on static hosting or server unreachable
       }
 
-      // 2. If API route unavailable (static hosting mode), authenticate with Firebase Auth & client fallback
+      // 2. If API route unavailable (static hosting mode), strictly validate admin credentials
       if (!apiSuccess) {
-        let authenticated = false;
-        try {
-          const credential = await signInWithEmailAndPassword(auth, email, password);
-          if (credential.user) {
-            authenticated = true;
-          }
-        } catch {
-          // Client side fallback for root admin email/password matching
-          const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "nachoyal@gmail.com";
-          const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_";
+        const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "nachoyal@gmail.com").trim().toLowerCase();
+        const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_";
 
-          if (
-            email.trim().toLowerCase() === adminEmail.toLowerCase() &&
-            password === adminPassword
-          ) {
-            authenticated = true;
+        const cleanEmail = email.trim().toLowerCase();
+
+        let authenticated = false;
+
+        // Strict root admin email & password check
+        if (cleanEmail === adminEmail && password === adminPassword) {
+          authenticated = true;
+          // Optionally sign in to Firebase Auth as well
+          try {
+            await signInWithEmailAndPassword(auth, email, password);
+          } catch {
+            // Firebase Auth sign-in failure is non-fatal if root credentials match
+          }
+        } else {
+          // Attempt Firebase Auth sign-in for alternate admin accounts
+          try {
+            const credential = await signInWithEmailAndPassword(auth, email, password);
+            if (credential.user) {
+              const { doc, getDoc } = await import("firebase/firestore");
+              const { db } = await import("@/lib/firebase");
+              const userDoc = await getDoc(doc(db, "users", credential.user.uid));
+              if (userDoc.exists() && userDoc.data()?.role === "admin" && password === adminPassword) {
+                authenticated = true;
+              } else {
+                // Not authorized as admin — sign out immediately
+                const { signOut: firebaseSignOut } = await import("firebase/auth");
+                await firebaseSignOut(auth);
+              }
+            }
+          } catch {
+            authenticated = false;
           }
         }
 
