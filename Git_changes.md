@@ -1,5 +1,31 @@
 # Git Commit Changes Log
 
+## Pending Uncommitted Changes (Local Build Verified)
+* **Date & Timestamp:** Sunday, October 4, 2026 — 21:18:00 (`2026-10-04T21:18:00-06:00`)
+* **Branch:** `main` (Local changes pending user testing & approval before push/deploy)
+* **Status:** Tested & verified with `npm run build` (20/20 static pages compiled, 0 errors).
+
+---
+
+### Summary of Actions Taken
+
+1. **Modified Files:**
+   - [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx):
+     - Updated `handleDelete` and `handleReEnable` to directly write `{ disabled: true/false }` to Firestore `users` collection via `setDoc`, bypassing broken API route calls in static export mode.
+     - Added `SwipeableEmployeeRow` component supporting touch and mouse-drag slide-to-right gesture to reveal red **"Eliminar de Lista"** action.
+     - Added quick 1-click **"Habilitar"** re-activation button to employee row cards when filtered or disabled.
+     - Added status filter tabs: **"Todos"**, **"Activos"**, **"Deshabilitados"**, and **"Eliminados"**.
+     - Erasing a user sets `{ erased: true, disabled: true }` in Firestore, hiding them from active list views while preserving 100% of their historical database records in `attendance` and `incidences` for reports.
+   - [`Changes_up_to_date.md`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/Changes_up_to_date.md): Appended Section 21 detailing the root cause, rationale, implementation plan, implementation summary, key adjustments, and timestamp.
+
+2. **Verification:**
+   - Executed `npm run build` — compiled and statically exported 20/20 pages with **0 errors**.
+
+3. **Production Deployment Guard:**
+   - Changes are built and ready locally. Awaiting user testing, approval, and confirmation before executing git push and Firebase Hosting deployment.
+
+---
+
 ## Latest Commit: `ec2c6064`
 * **Date & Timestamp:** Sunday, October 4, 2026 — 20:46:17 (`2026-10-04T20:46:17-06:00`)
 * **Branch:** `main` (synchronized with `origin/main`)

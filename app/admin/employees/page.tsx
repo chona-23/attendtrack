@@ -8,7 +8,7 @@ import {
   Search, Users, RefreshCw, Mail, Clock,
   Pencil, X, Save, Trash2, AlertTriangle, Eye, EyeOff,
   KeyRound, User as UserIcon, Briefcase, Building2,
-  Timer, Zap, MonitorCheck, CheckCircle2,
+  Timer, Zap, MonitorCheck, CheckCircle2, GripVertical,
 } from "lucide-react";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { Badge } from "@/components/ui/Badge";
@@ -29,6 +29,8 @@ interface Employee {
   role: string;
   createdAt: string;
   disabled?: boolean;
+  erased?: boolean;
+  erasedAt?: string;
   lastEvent?: { eventType: string; timestamp: { seconds: number } };
   todayStatus?: string;
   // Work profile fields
@@ -217,28 +219,21 @@ function EditEmployeeModal({
     setError("");
     setDeleting(true);
     try {
+      // Direct Firestore update guarantees state persistence across all hosting modes
+      await setDoc(doc(db, "users", employee.uid), { disabled: true }, { merge: true });
       try {
-        const res = await fetch("/api/admin/employees", {
+        await fetch("/api/admin/employees", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: employee.uid }),
         });
-        if (!res.ok && res.status !== 404) {
-          const data = await res.json();
-          throw new Error(data.error ?? "Error al eliminar");
-        }
-        if (res.status === 404) throw new Error("404_STATIC");
-      } catch (apiErr: unknown) {
-        if ((apiErr as Error).message === "404_STATIC" || (apiErr as Error).name === "TypeError") {
-          await updateDoc(doc(db, "users", employee.uid), { disabled: true });
-        } else {
-          throw apiErr;
-        }
+      } catch {
+        // Ignored in static mode
       }
-      setSuccess("Usuario deshabilitado. Se conservan los registros de asistencia.");
-      setTimeout(() => { onSaved(); onClose(); }, 1500);
+      setSuccess("Usuario deshabilitado con éxito. Se conservan los registros de asistencia e incidencias en la base de datos.");
+      setTimeout(() => { onSaved(); onClose(); }, 1200);
     } catch (err: unknown) {
-      setError((err as Error).message ?? "Error al eliminar.");
+      setError((err as Error).message ?? "Error al deshabilitar.");
       setConfirmDelete(false);
     } finally {
       setDeleting(false);
@@ -249,14 +244,16 @@ function EditEmployeeModal({
     setError("");
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", employee.uid), { disabled: false });
+      await setDoc(doc(db, "users", employee.uid), { disabled: false, erased: false }, { merge: true });
       try {
         await fetch("/api/admin/employees", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: employee.uid, disabled: false }),
         });
-      } catch {}
+      } catch {
+        // Ignored in static mode
+      }
       setSuccess("Usuario habilitado con éxito.");
       setTimeout(() => { onSaved(); onClose(); }, 1200);
     } catch (err: unknown) {
@@ -595,6 +592,212 @@ function EditEmployeeModal({
   );
 }
 
+// ── Swipeable Employee Row Component ─────────────────────────────────────────
+function SwipeableEmployeeRow({
+  emp,
+  statusCfg,
+  wtLabel,
+  onEdit,
+  onReEnable,
+  onErase,
+}: {
+  emp: Employee;
+  statusCfg: { label: string; variant: "success" | "warning" | "info" | "muted" };
+  wtLabel: string | null;
+  onEdit: (emp: Employee) => void;
+  onReEnable: (emp: Employee) => void;
+  onErase: (emp: Employee) => void;
+}) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+  const currentXRef = useRef(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startXRef.current = e.touches[0].clientX;
+    currentXRef.current = 0;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientX - startXRef.current;
+    if (diff > 0 && diff < 160) {
+      currentXRef.current = diff;
+      setOffsetX(diff);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    if (currentXRef.current > 80) {
+      setOffsetX(120);
+    } else {
+      setOffsetX(0);
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only drag if clicking container background or drag grip, not buttons
+    if ((e.target as HTMLElement).closest("button")) return;
+    startXRef.current = e.clientX;
+    currentXRef.current = 0;
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const diff = e.clientX - startXRef.current;
+    if (diff > 0 && diff < 160) {
+      currentXRef.current = diff;
+      setOffsetX(diff);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (currentXRef.current > 80) {
+      setOffsetX(120);
+    } else {
+      setOffsetX(0);
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl select-none my-1.5 group">
+      {/* Revealed action area on the left when swiping right */}
+      <div className="absolute inset-y-0 left-0 w-36 bg-rose-600 dark:bg-rose-700 text-white flex items-center justify-center px-3 font-semibold text-xs rounded-l-xl transition-opacity z-0">
+        <button
+          type="button"
+          onClick={() => { setOffsetX(0); onErase(emp); }}
+          className="flex items-center gap-1.5 w-full h-full justify-center text-white hover:underline cursor-pointer"
+          title="Eliminar de la lista de empleados (Sus registros de asistencia e incidencias se CONSERVAN intactos)"
+        >
+          <Trash2 size={16} />
+          <span>Eliminar de Lista</span>
+        </button>
+      </div>
+
+      {/* Main Row Container */}
+      <div
+        style={{ transform: `translateX(${offsetX}px)`, transition: isDragging ? "none" : "transform 0.2s ease-out" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        className={[
+          "flex items-center gap-4 px-4 py-3.5 bg-white dark:bg-slate-800/95 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs relative z-10 cursor-grab active:cursor-grabbing",
+          emp.erased
+            ? "border-amber-300 dark:border-amber-800/60 opacity-60 bg-amber-50/40 dark:bg-amber-950/20"
+            : emp.disabled
+            ? "border-rose-200 dark:border-rose-900/40 bg-rose-50/20 dark:bg-rose-950/10"
+            : "border-slate-200 dark:border-slate-700",
+        ].join(" ")}
+      >
+        {/* Visual Grip Handle for Swiping Right */}
+        <div
+          onClick={() => setOffsetX(offsetX > 0 ? 0 : 120)}
+          className="text-slate-300 dark:text-slate-600 hover:text-slate-500 transition-colors shrink-0 cursor-pointer p-1"
+          title="Desliza a la derecha o haz clic para revelar 'Eliminar de Lista'"
+        >
+          <GripVertical size={16} />
+        </div>
+
+        {/* Avatar */}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+          {emp.displayName?.[0]?.toUpperCase() ?? "?"}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-slate-900 dark:text-slate-200 truncate">{emp.displayName}</p>
+            {emp.erased ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-bold border border-amber-300 dark:border-amber-800">
+                Eliminado de Lista
+              </span>
+            ) : emp.disabled ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold border border-rose-300 dark:border-rose-800">
+                Deshabilitado
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+              <Mail size={11} />
+              <span className="truncate">{emp.email}</span>
+            </div>
+            {wtLabel && (
+              <span className="text-xs px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400 font-medium">
+                {wtLabel}
+              </span>
+            )}
+            {emp.project && (
+              <span className="text-xs px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-400 font-medium truncate max-w-[120px]">
+                {emp.project}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action Items */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {emp.lastEvent && (
+            <div className="hidden sm:flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+              <Clock size={11} />
+              {format(new Date(emp.lastEvent.timestamp.seconds * 1000), "HH:mm")}
+            </div>
+          )}
+          <Badge variant={statusCfg.variant} dot>
+            {statusCfg.label}
+          </Badge>
+
+          {/* Quick Habilitar action button if disabled */}
+          {emp.disabled && (
+            <button
+              type="button"
+              id={`re-enable-quick-${emp.uid}`}
+              onClick={(e) => { e.stopPropagation(); onReEnable(emp); }}
+              title="Habilitar usuario"
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
+            >
+              <CheckCircle2 size={13} />
+              <span>Habilitar</span>
+            </button>
+          )}
+
+          {/* Erase button for desktop/direct action */}
+          {!emp.erased && (
+            <button
+              type="button"
+              id={`erase-user-${emp.uid}`}
+              onClick={(e) => { e.stopPropagation(); onErase(emp); }}
+              title="Eliminar de lista de empleados (Los registros de asistencia e incidencias se conservan)"
+              className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+
+          {/* Edit Button */}
+          <button
+            id={`edit-emp-${emp.uid}`}
+            onClick={(e) => { e.stopPropagation(); onEdit(emp); }}
+            title={`Editar ${emp.displayName}`}
+            className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
+          >
+            <Pencil size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function AdminEmployeesPage() {
   const [employees, setEmployees]   = useState<Employee[]>([]);
@@ -672,7 +875,28 @@ export default function AdminEmployeesPage() {
 
   useEffect(() => { loadEmployees(); }, []);
 
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled" | "erased">("all");
+
+  const handleReEnableQuick = async (emp: Employee) => {
+    try {
+      await setDoc(doc(db, "users", emp.uid), { disabled: false, erased: false }, { merge: true });
+      loadEmployees();
+    } catch (err) {
+      console.error("Failed to re-enable employee:", err);
+    }
+  };
+
+  const handleEraseQuick = async (emp: Employee) => {
+    if (!window.confirm(`¿Desea eliminar a "${emp.displayName}" de la lista de empleados? Sus registros de asistencia e incidencias se CONSERVARÁN intactos en la base de datos para los reportes.`)) {
+      return;
+    }
+    try {
+      await setDoc(doc(db, "users", emp.uid), { erased: true, disabled: true, erasedAt: new Date().toISOString() }, { merge: true });
+      loadEmployees();
+    } catch (err) {
+      console.error("Failed to erase employee:", err);
+    }
+  };
 
   useEffect(() => {
     const q = search.toLowerCase();
@@ -685,9 +909,10 @@ export default function AdminEmployeesPage() {
 
         if (!matchesQuery) return false;
 
-        if (statusFilter === "active") return !e.disabled;
-        if (statusFilter === "disabled") return Boolean(e.disabled);
-        return true;
+        if (statusFilter === "active") return !e.disabled && !e.erased;
+        if (statusFilter === "disabled") return Boolean(e.disabled) && !e.erased;
+        if (statusFilter === "erased") return Boolean(e.erased);
+        return q ? true : !e.erased;
       })
     );
   }, [search, statusFilter, employees]);
@@ -729,19 +954,20 @@ export default function AdminEmployeesPage() {
             />
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-full sm:w-auto shrink-0 overflow-x-auto">
             {(
               [
                 { id: "all", label: "Todos" },
                 { id: "active", label: "Activos" },
                 { id: "disabled", label: "Deshabilitados" },
+                { id: "erased", label: "Eliminados" },
               ] as const
             ).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id)}
                 className={[
-                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex-1 sm:flex-none cursor-pointer",
+                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex-1 sm:flex-none cursor-pointer whitespace-nowrap",
                   statusFilter === tab.id
                     ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
@@ -752,6 +978,11 @@ export default function AdminEmployeesPage() {
             ))}
           </div>
         </div>
+
+        {/* Tip hint for swipe gesture */}
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 px-1">
+          <span>👉</span> Desliza una fila a la derecha (o usa la papelera) para eliminar a un empleado de la lista. Sus registros de asistencia e incidencias en la base de datos se conservan permanentemente.
+        </p>
 
         {/* Employee List */}
         {loading ? (
@@ -771,68 +1002,15 @@ export default function AdminEmployeesPage() {
               const statusCfg = statusLabels[emp.todayStatus ?? "idle"];
               const wtLabel = emp.workerType ? WORKER_TYPE_LABELS[emp.workerType] : null;
               return (
-                <div
+                <SwipeableEmployeeRow
                   key={emp.uid}
-                  className={[
-                    "flex items-center gap-4 px-4 py-3.5 bg-white dark:bg-slate-800/50 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs",
-                    emp.disabled ? "border-rose-200 dark:border-rose-900/40 opacity-75" : "border-slate-200 dark:border-slate-700",
-                  ].join(" ")}
-                >
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                    {emp.displayName?.[0]?.toUpperCase() ?? "?"}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-slate-900 dark:text-slate-200 truncate">{emp.displayName}</p>
-                      {emp.disabled && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold border border-rose-300 dark:border-rose-800">
-                          Deshabilitado
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                        <Mail size={11} />
-                        <span className="truncate">{emp.email}</span>
-                      </div>
-                      {wtLabel && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400 font-medium">
-                          {wtLabel}
-                        </span>
-                      )}
-                      {emp.project && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-400 font-medium truncate max-w-[120px]">
-                          {emp.project}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status + time + edit */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {emp.lastEvent && (
-                      <div className="hidden sm:flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                        <Clock size={11} />
-                        {format(new Date(emp.lastEvent.timestamp.seconds * 1000), "HH:mm")}
-                      </div>
-                    )}
-                    <Badge variant={statusCfg.variant} dot>
-                      {statusCfg.label}
-                    </Badge>
-                    {/* Edit button */}
-                    <button
-                      id={`edit-emp-${emp.uid}`}
-                      onClick={() => setEditTarget(emp)}
-                      title={`Editar ${emp.displayName}`}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                  </div>
-                </div>
+                  emp={emp}
+                  statusCfg={statusCfg}
+                  wtLabel={wtLabel}
+                  onEdit={(target) => setEditTarget(target)}
+                  onReEnable={handleReEnableQuick}
+                  onErase={handleEraseQuick}
+                />
               );
             })}
           </div>

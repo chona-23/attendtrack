@@ -313,6 +313,31 @@ This document maintains the complete, comprehensive, and chronological record of
      - Added `contentType.includes("application/json")` and `data?.success === true` condition to prevent static HTML `200 OK` responses from setting `authenticated = true`.
      - Enforced strict matching: `cleanEmail === adminEmail && password === adminPassword`.
 
+---
+
+### 21. Fix Employee Deshabilitar/Habilitar Firestore Persistence & Add Slide-to-Right Erase Feature
+* **Date & Timestamp:** Sunday, October 4, 2026 — 21:15:00 (`2026-10-04T21:15:00-06:00`)
+* **User Issue / Request:**
+  1. Clicking "Deshabilitar" in `/admin/employees` was not persisting the disabled status or showing disabled users under the "Deshabilitados" filter tab.
+  2. Need quick "Habilitar" option to re-enable disabled users directly from the employee list and edit modal.
+  3. Add a new function allowing admins to erase/archive a user when their row is slided to the right ("Eliminar de Lista"), while strictly preserving all the user's historical attendance and incidence records in the database for reports.
+* **Root Cause & Rationale:**
+  - `handleDelete` in `app/admin/employees/page.tsx` was attempting a server `fetch("/api/admin/employees", { method: "DELETE" })`. On static hosting (Firebase Hosting), fetch returns HTTP Status 200 OK with `Content-Type: text/html`, so the `catch` block was bypassed and `setDoc` was never called to update Firestore `users` collection with `{ disabled: true }`.
+  - Employee list lacked an interactive touch/drag gesture component to handle slide-to-right actions for erasing users from the menu while retaining database historical integrity.
+* **Implementation Summary:**
+  1. Updated `handleDelete` and `handleReEnable` in [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx) to execute direct Firestore `setDoc(doc(db, "users", uid), { disabled: true/false }, { merge: true })` updates, ensuring status instantly persists across static hosting.
+  2. Created `SwipeableEmployeeRow` component supporting touch gestures (`onTouchMove`) and mouse drag (`onMouseMove`) to slide rows to the right, revealing a red **"Eliminar de Lista"** action area.
+  3. Added quick **"Habilitar"** action button to employee row cards for disabled users, allowing 1-click re-activation.
+  4. Added status filter tabs: **"Todos"**, **"Activos"**, **"Deshabilitados"**, **"Eliminados"**. Erasing a user sets `{ erased: true, disabled: true }` in Firestore, removing them from active/disabled lists while preserving 100% of their records in `attendance` and `incidences` for `/admin/records` and `/admin/reports`.
+* **Key Adjustments Applied:**
+  1. [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx):
+     - Updated `Employee` model with `erased?: boolean` and `erasedAt?: string`.
+     - Direct `setDoc` calls in `handleDelete` (`disabled: true`) and `handleReEnable` (`disabled: false`).
+     - Added `SwipeableEmployeeRow` component with touch/mouse drag sliding to reveal Erase action.
+     - Added `handleReEnableQuick` and `handleEraseQuick` row handlers.
+     - Updated filter bar to include `"Todos"`, `"Activos"`, `"Deshabilitados"`, and `"Eliminados"`.
+
+
 
 
 
