@@ -1,29 +1,31 @@
 # Git Commit Changes Log
 
-## Pending Uncommitted Changes (Local Build Verified)
-* **Date & Timestamp:** Monday, October 5, 2026 — 10:46:00 (`2026-10-05T10:46:00-06:00`)
-* **Branch:** `main` (Local changes pending user testing & approval before push/deploy)
-* **Status:** Tested & verified with `npm run build` (20/20 static pages compiled, 0 errors).
+## Latest Commit: `a3affd3f`
+* **Date & Timestamp:** Monday, October 5, 2026 — 10:51:15 (`2026-10-05T10:51:15-06:00`)
+* **Branch:** `main` (synchronized with `origin/main`)
+* **Commit Message:** `Fix JSON.parse error on employee save and fix mobile layout in employees page`
 
 ---
 
 ### Summary of Actions Taken
 
-1. **Modified Files:**
+1. **Staged and Committed Modified Files:**
    - [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx):
-     - **JSON.parse fix:** Refactored `handleSave` to write directly to Firestore first as the primary guaranteed save. The `fetch PATCH` API call is now a best-effort call that checks `Content-Type: application/json` before calling `res.json()`, preventing any HTML parse errors.
-     - **Mobile layout fix:** Reduced row gap, padding, avatar size, and action button sizes for mobile; hid Badge text on mobile (coloured dot only); hid "Habilitar" text on mobile (icon only); hid status badges and worker type tags on mobile; hid grip handle on mobile.
-     - **Swipe-reveal fix:** Reduced reveal area from `w-36` to `w-16` (icon-only, no "Eliminar de Lista" text); updated swipe thresholds to match narrower reveal area.
-   - [`Changes_up_to_date.md`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/Changes_up_to_date.md): Appended Section 22 documenting root causes, implementation summary, and key adjustments.
+     - **JSON.parse fix:** Refactored `handleSave` to write directly to Firestore first as the primary guaranteed save. The `fetch PATCH` API call is now best-effort only; checks `Content-Type: application/json` before calling `res.json()` to prevent HTML parse errors on static hosting.
+     - **Mobile layout fix:** Reduced row gap, padding, avatar size; Badge text replaced with colour dot on mobile; "Habilitar" text hidden on mobile (icon only); status/disabled badges and worker type tags hidden on mobile; grip handle hidden on mobile; action gap reduced to `gap-1`.
+     - **Swipe-reveal fix:** Reveal area reduced from `w-36` to `w-16` (icon-only, no text); swipe thresholds updated (max 90px drag, snap at 40px → 64px).
+   - [`Changes_up_to_date.md`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/Changes_up_to_date.md): Appended Section 22 with root causes, implementation summary, and key adjustments.
+   - [`Git_changes.md`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/Git_changes.md): Updated with commit `a3affd3f` details.
 
 2. **Verification:**
    - Executed `npm run build` — compiled and statically exported 20/20 pages with **0 errors**.
 
-3. **Production Deployment Guard:**
-   - Changes are built and ready locally. Awaiting user testing, approval, and confirmation before executing git push and Firebase Hosting deployment.
+3. **Pushed to GitHub & Deployed to Production:**
+   - Created commit `a3affd3f`: *"Fix JSON.parse error on employee save and fix mobile layout in employees page"*.
+   - Pushed successfully to `origin/main`.
+   - Deployed live to Firebase Hosting via `npx -y firebase-tools deploy --only hosting` (`testchecker-4caeb.web.app` / `testchecker-4caeb.firebaseapp.com`).
 
 ---
-
 ## Latest Commit: `1c500166`
 * **Date & Timestamp:** Sunday, October 4, 2026 — 21:24:11 (`2026-10-04T21:24:11-06:00`)
 * **Branch:** `main` (synchronized with `origin/main`)
