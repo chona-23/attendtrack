@@ -23,76 +23,47 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      // 1. Try API endpoint if running with Node backend server
-      let apiSuccess = false;
+      const cleanEmail = email.trim().toLowerCase();
+      const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "nachoyal@gmail.com").trim().toLowerCase();
+      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_";
+
+      let authenticated = false;
+
+      // 1. Try API endpoint if running with Node backend server (must return application/json with success: true)
       try {
         const res = await fetch("/api/admin/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email: cleanEmail, password }),
         });
 
-        if (res.ok) {
-          apiSuccess = true;
-        } else if (res.status === 401) {
-          const contentType = res.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const data = await res.json();
-            setError(data.error || "Credenciales de administrador inválidas.");
-          } else {
-            setError("Credenciales de administrador inválidas.");
+        const contentType = res.headers.get("content-type");
+        if (res.ok && contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data?.success === true) {
+            authenticated = true;
           }
-          setLoading(false);
-          return;
         }
       } catch {
-        // Ignored: fetch failed because API route doesn't exist on static hosting or server unreachable
+        // Ignored: fetch failed or static export mode
       }
 
-      // 2. If API route unavailable (static hosting mode), strictly validate admin credentials
-      if (!apiSuccess) {
-        const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "nachoyal@gmail.com").trim().toLowerCase();
-        const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "_88122300_";
-
-        const cleanEmail = email.trim().toLowerCase();
-
-        let authenticated = false;
-
-        // Strict root admin email & password check
+      // 2. Strict static hosting mode validation (requires exact admin email & password match)
+      if (!authenticated) {
         if (cleanEmail === adminEmail && password === adminPassword) {
           authenticated = true;
-          // Optionally sign in to Firebase Auth as well
           try {
             await signInWithEmailAndPassword(auth, email, password);
           } catch {
-            // Firebase Auth sign-in failure is non-fatal if root credentials match
-          }
-        } else {
-          // Attempt Firebase Auth sign-in for alternate admin accounts
-          try {
-            const credential = await signInWithEmailAndPassword(auth, email, password);
-            if (credential.user) {
-              const { doc, getDoc } = await import("firebase/firestore");
-              const { db } = await import("@/lib/firebase");
-              const userDoc = await getDoc(doc(db, "users", credential.user.uid));
-              if (userDoc.exists() && userDoc.data()?.role === "admin" && password === adminPassword) {
-                authenticated = true;
-              } else {
-                // Not authorized as admin — sign out immediately
-                const { signOut: firebaseSignOut } = await import("firebase/auth");
-                await firebaseSignOut(auth);
-              }
-            }
-          } catch {
-            authenticated = false;
+            // Firebase Auth sign-in error is non-fatal if root credentials match
           }
         }
+      }
 
-        if (!authenticated) {
-          setError("Credenciales de administrador inválidas.");
-          setLoading(false);
-          return;
-        }
+      if (!authenticated) {
+        setError("Credenciales de administrador inválidas.");
+        setLoading(false);
+        return;
       }
 
       // Save admin session token/flag in client storage and cookie

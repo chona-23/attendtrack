@@ -295,6 +295,25 @@ This document maintains the complete, comprehensive, and chronological record of
   5. [`app/verify-2fa/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/verify-2fa/page.tsx):
      - Added `handleReset2FA` method and UI confirmation block allowing employees to clear TOTP secret and navigate to `/setup-2fa`.
 
+---
+
+### 20. Fix Admin Login Static Export API Route False-Positive Bypassing Password Validation
+* **Date & Timestamp:** Sunday, October 4, 2026 — 20:44:00 (`2026-10-04T20:44:00-06:00`)
+* **User Issue / Request:** On `/admin/login/`, entering arbitrary email addresses (such as `nachoyal@hotmail.com`) with arbitrary passwords (such as `3172361872361873`) was still bypassing authentication and granting admin access instead of rejecting with an invalid credentials error.
+* **Root Cause:**
+  - On static hosting (Firebase Hosting static export), calling `fetch("/api/admin/verify")` triggers Firebase Hosting's SPA/cleanUrls fallback rule, which returns the static HTML page with HTTP Status `200 OK` (`Content-Type: text/html`).
+  - In [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx), `if (res.ok)` evaluated to `true` for HTTP status 200, setting `apiSuccess = true` regardless of response content type or body.
+  - Because `apiSuccess` was set to `true`, the static fallback credentials check (`if (!apiSuccess)`) was bypassed entirely, setting `admin_logged_in = true` and granting admin access for ANY email and password combination.
+* **Implementation Summary:**
+  1. Updated `handleSubmit` in `AdminLoginPage` ([`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx)) to strictly check that `res.ok` is true AND `res.headers.get("content-type")` includes `application/json` AND `data.success === true` before setting `authenticated = true`.
+  2. If the response is HTML (static hosting fallback), it safely falls through to strict credential validation: checking `cleanEmail === adminEmail` (`nachoyal@gmail.com`) AND `password === adminPassword` (`_88122300_`).
+  3. Any login attempt with an unrecognized email (e.g. `nachoyal@hotmail.com`) or incorrect password now triggers `"Credenciales de administrador inválidas."` and blocks access.
+* **Key Adjustments Applied:**
+  1. [`app/admin/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/login/page.tsx):
+     - Added `contentType.includes("application/json")` and `data?.success === true` condition to prevent static HTML `200 OK` responses from setting `authenticated = true`.
+     - Enforced strict matching: `cleanEmail === adminEmail && password === adminPassword`.
+
+
 
 
 
