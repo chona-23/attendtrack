@@ -1,15 +1,15 @@
 # Git Commit Changes Log
 
-## Pending Uncommitted Changes (Local Build Verified)
-* **Date & Timestamp:** Sunday, October 4, 2026 — 21:18:00 (`2026-10-04T21:18:00-06:00`)
-* **Branch:** `main` (Local changes pending user testing & approval before push/deploy)
-* **Status:** Tested & verified with `npm run build` (20/20 static pages compiled, 0 errors).
+## Latest Commit: `1c500166`
+* **Date & Timestamp:** Sunday, October 4, 2026 — 21:24:11 (`2026-10-04T21:24:11-06:00`)
+* **Branch:** `main` (synchronized with `origin/main`)
+* **Commit Message:** `Fix employee disable/re-enable persistence and add slide-to-right erase feature`
 
 ---
 
 ### Summary of Actions Taken
 
-1. **Modified Files:**
+1. **Staged and Committed Modified Files:**
    - [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx):
      - Updated `handleDelete` and `handleReEnable` to directly write `{ disabled: true/false }` to Firestore `users` collection via `setDoc`, bypassing broken API route calls in static export mode.
      - Added `SwipeableEmployeeRow` component supporting touch and mouse-drag slide-to-right gesture to reveal red **"Eliminar de Lista"** action.
@@ -21,8 +21,10 @@
 2. **Verification:**
    - Executed `npm run build` — compiled and statically exported 20/20 pages with **0 errors**.
 
-3. **Production Deployment Guard:**
-   - Changes are built and ready locally. Awaiting user testing, approval, and confirmation before executing git push and Firebase Hosting deployment.
+3. **Pushed to GitHub & Deployed to Production:**
+   - Created commit `1c500166`: *"Fix employee disable/re-enable persistence and add slide-to-right erase feature"*.
+   - Pushed successfully to `origin/main`.
+   - Deployed live to Firebase Hosting via `npx -y firebase-tools deploy --only hosting` (`testchecker-4caeb.web.app` / `testchecker-4caeb.firebaseapp.com`).
 
 ---
 
