@@ -1,15 +1,15 @@
 # Git Commit Changes Log
 
-## Pending Uncommitted Local Changes (Awaiting User Verification & Approval)
-* **Date & Timestamp:** Sunday, October 4, 2026 — 20:34:00 (`2026-10-04T20:34:00-06:00`)
-* **Branch:** `main` (Local changes applied; pending git commit, sync & firebase deploy)
-* **Status:** Build verified clean with `npm run build` (20/20 static pages compiled, 0 errors).
+## Latest Commit: `dd8abd52`
+* **Date & Timestamp:** Sunday, October 4, 2026 — 20:35:12 (`2026-10-04T20:35:12-06:00`)
+* **Branch:** `main` (synchronized with `origin/main`)
+* **Commit Message:** `Fix 2FA setup redirection, employee soft-delete/re-enable, admin auth password check & 2FA reset option`
 
 ---
 
-### Summary of Pending Actions & Modified Files
+### Summary of Actions Taken
 
-1. **Modified Files:**
+1. **Staged and Committed Modified Files:**
    - [`app/setup-2fa/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/setup-2fa/page.tsx): Updated completion handler to clear TOTP session state, sign out, and redirect to `/login?setupSuccess=true`. Added automatic redirect to `/login` if `totpEnabled` is already true.
    - [`app/login/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/login/page.tsx): Added `setupSuccess` query param listener and green alert banner notifying employee that 2FA configuration completed.
    - [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx): Added employee soft-delete button ("Deshabilitar") ensuring all database records persist, added re-enable button ("Habilitar"), added status badges ("Deshabilitado"), and status filter tabs ("Todos", "Activos", "Deshabilitados").
@@ -20,8 +20,10 @@
 2. **Verification:**
    - Executed `npm run build` — compiled and statically exported 20/20 pages with **0 errors**.
 
-3. **Production Deployment Guard:**
-   - Per explicit instruction, local changes are ready for testing and approval. Git sync and Firebase production deployment (`npx firebase-tools deploy --only hosting`) will be executed upon user confirmation.
+3. **Pushed to GitHub & Deployed to Production:**
+   - Created commit `dd8abd52`: *"Fix 2FA setup redirection, employee soft-delete/re-enable, admin auth password check & 2FA reset option"*.
+   - Pushed successfully to `origin/main`.
+   - Deployed live to Firebase Hosting via `npx -y firebase-tools deploy --only hosting` (`testchecker-4caeb.web.app` / `testchecker-4caeb.firebaseapp.com`).
 
 ---
 
