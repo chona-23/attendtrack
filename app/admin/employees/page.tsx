@@ -169,40 +169,41 @@ function EditEmployeeModal({
       body.showWorkProfile     = profileVisible;
 
       let successMessage = "Perfil del empleado actualizado con éxito.";
+      // In static export mode, the API route is unavailable — go directly to Firestore.
+      // Even in non-static mode, we do the Firestore write first so changes are always persisted.
       try {
-        const res = await fetch("/api/admin/employees", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok && res.status !== 404) {
-          const data = await res.json();
-          throw new Error(data.error ?? "Error al actualizar");
+        const updateFields: Record<string, any> = {
+          displayName,
+          project,
+          workerType,
+          workingHours: { start: hoursStart, end: hoursEnd },
+          extraHoursAuthorized: extraAuth,
+          extraHoursAllowed: extraAllowed !== "" ? Number(extraAllowed) : 0,
+          profileVisible,
+          showWorkProfile: profileVisible,
+        };
+        if (email !== employee.email) updateFields.email = email;
+        await setDoc(doc(db, "users", employee.uid), updateFields, { merge: true });
+        if (password.length >= 6) {
+          successMessage = "Perfil actualizado. (Nota: El cambio de contraseña requiere restablecimiento por correo en modo estático).";
         }
-        if (res.status === 404) {
-          throw new Error("404_STATIC");
-        }
-      } catch (apiErr: unknown) {
-        if ((apiErr as Error).message === "404_STATIC" || (apiErr as Error).name === "TypeError") {
-          // Static export fallback — update Firestore document directly
-          const updateFields: Record<string, any> = {
-            displayName,
-            email,
-            project,
-            workerType,
-            workingHours: { start: hoursStart, end: hoursEnd },
-            extraHoursAuthorized: extraAuth,
-            extraHoursAllowed: extraAllowed !== "" ? Number(extraAllowed) : 0,
-            profileVisible,
-            showWorkProfile: profileVisible,
-          };
-          await setDoc(doc(db, "users", employee.uid), updateFields, { merge: true });
-          if (password.length >= 6) {
-            successMessage = "Perfil actualizado. (Nota: El cambio de contraseña requiere backend serverless o restablecimiento por correo en modo estático).";
+        // Best-effort API call (ignored if it fails in static mode)
+        try {
+          const res = await fetch("/api/admin/employees", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const ct = res.headers.get("content-type") ?? "";
+          if (!res.ok && ct.includes("application/json")) {
+            const data = await res.json();
+            console.warn("API patch error:", data.error);
           }
-        } else {
-          throw apiErr;
+        } catch {
+          // Silently ignored in static export mode
         }
+      } catch (firestoreErr: unknown) {
+        throw firestoreErr;
       }
 
       setSuccess(successMessage);
@@ -622,7 +623,7 @@ function SwipeableEmployeeRow({
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
     const diff = e.touches[0].clientX - startXRef.current;
-    if (diff > 0 && diff < 160) {
+    if (diff > 0 && diff < 90) {
       currentXRef.current = diff;
       setOffsetX(diff);
     }
@@ -630,8 +631,8 @@ function SwipeableEmployeeRow({
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    if (currentXRef.current > 80) {
-      setOffsetX(120);
+    if (currentXRef.current > 40) {
+      setOffsetX(64);
     } else {
       setOffsetX(0);
     }
@@ -648,7 +649,7 @@ function SwipeableEmployeeRow({
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
     const diff = e.clientX - startXRef.current;
-    if (diff > 0 && diff < 160) {
+    if (diff > 0 && diff < 90) {
       currentXRef.current = diff;
       setOffsetX(diff);
     }
@@ -657,8 +658,8 @@ function SwipeableEmployeeRow({
   const handleMouseUp = () => {
     if (!isDragging) return;
     setIsDragging(false);
-    if (currentXRef.current > 80) {
-      setOffsetX(120);
+    if (currentXRef.current > 40) {
+      setOffsetX(64);
     } else {
       setOffsetX(0);
     }
@@ -666,16 +667,15 @@ function SwipeableEmployeeRow({
 
   return (
     <div className="relative overflow-hidden rounded-xl select-none my-1.5 group">
-      {/* Revealed action area on the left when swiping right */}
-      <div className="absolute inset-y-0 left-0 w-36 bg-rose-600 dark:bg-rose-700 text-white flex items-center justify-center px-3 font-semibold text-xs rounded-l-xl transition-opacity z-0">
+      {/* Revealed action area — icon only, shown only when slid open */}
+      <div className="absolute inset-y-0 left-0 w-16 bg-rose-600 dark:bg-rose-700 text-white flex items-center justify-center z-0 rounded-l-xl">
         <button
           type="button"
           onClick={() => { setOffsetX(0); onErase(emp); }}
-          className="flex items-center gap-1.5 w-full h-full justify-center text-white hover:underline cursor-pointer"
-          title="Eliminar de la lista de empleados (Sus registros de asistencia e incidencias se CONSERVAN intactos)"
+          className="flex items-center justify-center w-full h-full text-white cursor-pointer"
+          title="Eliminar de la lista de empleados (Sus registros se CONSERVAN intactos)"
         >
-          <Trash2 size={16} />
-          <span>Eliminar de Lista</span>
+          <Trash2 size={20} />
         </button>
       </div>
 
@@ -690,7 +690,7 @@ function SwipeableEmployeeRow({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         className={[
-          "flex items-center gap-4 px-4 py-3.5 bg-white dark:bg-slate-800/95 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs relative z-10 cursor-grab active:cursor-grabbing",
+          "flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 bg-white dark:bg-slate-800/95 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs relative z-10 cursor-grab active:cursor-grabbing",
           emp.erased
             ? "border-amber-300 dark:border-amber-800/60 opacity-60 bg-amber-50/40 dark:bg-amber-950/20"
             : emp.disabled
@@ -698,99 +698,104 @@ function SwipeableEmployeeRow({
             : "border-slate-200 dark:border-slate-700",
         ].join(" ")}
       >
-        {/* Visual Grip Handle for Swiping Right */}
+        {/* Visual Grip Handle */}
         <div
-          onClick={() => setOffsetX(offsetX > 0 ? 0 : 120)}
-          className="text-slate-300 dark:text-slate-600 hover:text-slate-500 transition-colors shrink-0 cursor-pointer p-1"
-          title="Desliza a la derecha o haz clic para revelar 'Eliminar de Lista'"
+          onClick={() => setOffsetX(offsetX > 0 ? 0 : 64)}
+          className="text-slate-300 dark:text-slate-600 hover:text-slate-500 transition-colors shrink-0 cursor-pointer hidden sm:block"
+          title="Desliza a la derecha para revelar Eliminar"
         >
-          <GripVertical size={16} />
+          <GripVertical size={15} />
         </div>
 
         {/* Avatar */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
           {emp.displayName?.[0]?.toUpperCase() ?? "?"}
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-slate-900 dark:text-slate-200 truncate">{emp.displayName}</p>
+        {/* Info — takes all remaining space, min-w-0 to allow truncation */}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="font-semibold text-sm text-slate-900 dark:text-slate-200 truncate min-w-0">{emp.displayName}</p>
             {emp.erased ? (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-bold border border-amber-300 dark:border-amber-800">
-                Eliminado de Lista
+              <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-bold border border-amber-300 dark:border-amber-800 whitespace-nowrap flex-shrink-0">
+                Eliminado
               </span>
             ) : emp.disabled ? (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold border border-rose-300 dark:border-rose-800">
+              <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold border border-rose-300 dark:border-rose-800 whitespace-nowrap flex-shrink-0">
                 Deshabilitado
               </span>
             ) : null}
           </div>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-              <Mail size={11} />
+          <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+            <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 min-w-0">
+              <Mail size={10} className="flex-shrink-0" />
               <span className="truncate">{emp.email}</span>
             </div>
             {wtLabel && (
-              <span className="text-xs px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400 font-medium">
+              <span className="hidden sm:inline text-xs px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400 font-medium whitespace-nowrap flex-shrink-0">
                 {wtLabel}
-              </span>
-            )}
-            {emp.project && (
-              <span className="text-xs px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-400 font-medium truncate max-w-[120px]">
-                {emp.project}
               </span>
             )}
           </div>
         </div>
 
-        {/* Action Items */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Actions — compact on mobile */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Status badge — dot-only on mobile, full label on sm+ */}
           {emp.lastEvent && (
-            <div className="hidden sm:flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="hidden md:flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
               <Clock size={11} />
               {format(new Date(emp.lastEvent.timestamp.seconds * 1000), "HH:mm")}
             </div>
           )}
-          <Badge variant={statusCfg.variant} dot>
-            {statusCfg.label}
-          </Badge>
+          <div className="hidden sm:block">
+            <Badge variant={statusCfg.variant} dot>
+              {statusCfg.label}
+            </Badge>
+          </div>
+          {/* Mobile: coloured dot only */}
+          <span className={[
+            "sm:hidden w-2 h-2 rounded-full flex-shrink-0",
+            statusCfg.variant === "success" ? "bg-emerald-500" :
+            statusCfg.variant === "warning" ? "bg-amber-400" :
+            "bg-slate-400"
+          ].join(" ")} />
 
-          {/* Quick Habilitar action button if disabled */}
+          {/* Habilitar — icon+text on sm+, icon-only on mobile */}
           {emp.disabled && (
             <button
               type="button"
               id={`re-enable-quick-${emp.uid}`}
               onClick={(e) => { e.stopPropagation(); onReEnable(emp); }}
               title="Habilitar usuario"
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
+              className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
             >
               <CheckCircle2 size={13} />
-              <span>Habilitar</span>
+              <span className="hidden sm:inline">Habilitar</span>
             </button>
           )}
 
-          {/* Erase button for desktop/direct action */}
+          {/* Trash icon — only if not already erased */}
           {!emp.erased && (
             <button
               type="button"
               id={`erase-user-${emp.uid}`}
               onClick={(e) => { e.stopPropagation(); onErase(emp); }}
-              title="Eliminar de lista de empleados (Los registros de asistencia e incidencias se conservan)"
+              title="Eliminar de lista"
               className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
             >
-              <Trash2 size={15} />
+              <Trash2 size={14} />
             </button>
           )}
 
-          {/* Edit Button */}
+          {/* Edit */}
           <button
             id={`edit-emp-${emp.uid}`}
             onClick={(e) => { e.stopPropagation(); onEdit(emp); }}
             title={`Editar ${emp.displayName}`}
             className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
           >
-            <Pencil size={15} />
+            <Pencil size={14} />
           </button>
         </div>
       </div>

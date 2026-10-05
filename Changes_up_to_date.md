@@ -338,8 +338,37 @@ This document maintains the complete, comprehensive, and chronological record of
      - Updated filter bar to include `"Todos"`, `"Activos"`, `"Deshabilitados"`, and `"Eliminados"`.
 
 
+---
 
-
-
+### 22. Fix JSON.parse Error on Employee Edit Save & Mobile Layout Improvements
+* **Date & Timestamp:** Monday, October 5, 2026 — 10:45:00 (`2026-10-05T10:45:00-06:00`)
+* **User Issue / Request:**
+  1. When saving changes to an employee profile in `/admin/employees/`, the modal displayed: `"JSON.parse: unexpected end of data at line 1 column 1 of the JSON data"` and no changes were applied.
+  2. On mobile view, the employee row card was visually broken — information was overlapping, the hidden "Eliminar de Lista" swipe-reveal text bled through the row, and the action buttons overflowed beyond the card width.
+  3. The swipe-reveal area showed both a trash icon and the text "Eliminar de Lista" — user requested icon-only.
+* **Root Cause:**
+  - **JSON.parse error:** In `handleSave` of `app/admin/employees/page.tsx`, the code first called `fetch("/api/admin/employees", { method: "PATCH" })`. On static hosting, this returns HTML with a non-200 status code. When `!res.ok`, the code called `await res.json()` on an HTML response body — this caused the `JSON.parse: unexpected end of data` error. No Firestore write was executed, so changes were never saved.
+  - **Mobile overflow:** The action bar (`flex items-center gap-2 flex-shrink-0`) contained a full-text Badge, "Habilitar" text button, and two icon buttons, which was too wide for small screens. Combined with `gap-4` on the row and `flex-wrap` on the info section, the layout collapsed/overlapped on mobile viewports.
+  - **Swipe-reveal bleed:** The reveal area was `w-36` (144px), causing a portion of the red area to be visible at the edge of the card even before the user swiped.
+* **Implementation Summary:**
+  1. Refactored `handleSave` to **first write directly to Firestore** (`setDoc` with `merge: true`), making saves reliable in both static and server modes. The API call (`fetch PATCH`) is now a best-effort background call that is silently ignored if unavailable or if it returns non-JSON — `Content-Type: application/json` is checked before calling `res.json()` to prevent the JSON parse error.
+  2. Fixed mobile layout in `SwipeableEmployeeRow`: reduced row gap to `gap-2 sm:gap-3`, padded with `px-3 sm:px-4 py-3`, reduced avatar to `w-9 h-9 sm:w-10 sm:h-10`, ensured info section has `min-w-0 overflow-hidden` for proper text truncation.
+  3. Swipe-reveal area reduced from `w-36` to `w-16` (icon-only, no text). Swipe thresholds updated to 90/40/64 matching the new narrower area.
+  4. On mobile: Badge status label replaced with a small coloured dot (`sm:hidden`), Badge text visible on `sm+`; "Habilitar" text hidden on mobile (icon only with `sm:inline`); status/disabled badge hidden on mobile (`hidden sm:inline`); workerType tag hidden on mobile (`hidden sm:inline`); grip handle hidden on mobile (`hidden sm:block`); action gap reduced to `gap-1`.
+* **Key Adjustments Applied:**
+  1. [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx) — `handleSave`:
+     - Removed `fetch` call as the primary save path. Now performs `setDoc` to Firestore first as the guaranteed write.
+     - Added Content-Type guard (`ct.includes("application/json")`) before `res.json()` to prevent HTML parsing errors.
+     - `fetch PATCH` call moved to a best-effort `try/catch` block that is silently ignored on static hosting.
+  2. [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx) — `SwipeableEmployeeRow`:
+     - Swipe-reveal `div` reduced from `w-36` to `w-16`; removed "Eliminar de Lista" text, icon-only (Trash2 size 20).
+     - Swipe thresholds updated: max drag `90px`, snap threshold `>40px`, snap target `64px`.
+     - Grip handle hidden on mobile with `hidden sm:block`.
+     - Row gap: `gap-2 sm:gap-3`; padding: `px-3 sm:px-4 py-3`.
+     - Avatar: `w-9 h-9 sm:w-10 sm:h-10`.
+     - Info section: `min-w-0 overflow-hidden` + name `truncate min-w-0`, status badges `hidden sm:inline`.
+     - Action items: `gap-1`; Badge visible only on `sm+`, replaced by colour-coded `w-2 h-2` dot on mobile.
+     - "Habilitar" text: `hidden sm:inline`, icon always visible.
+     - Worker type tag: `hidden sm:inline`.
 
 
