@@ -354,7 +354,6 @@ This document maintains the complete, comprehensive, and chronological record of
   1. Refactored `handleSave` to **first write directly to Firestore** (`setDoc` with `merge: true`), making saves reliable in both static and server modes. The API call (`fetch PATCH`) is now a best-effort background call that is silently ignored if unavailable or if it returns non-JSON — `Content-Type: application/json` is checked before calling `res.json()` to prevent the JSON parse error.
   2. Fixed mobile layout in `SwipeableEmployeeRow`: reduced row gap to `gap-2 sm:gap-3`, padded with `px-3 sm:px-4 py-3`, reduced avatar to `w-9 h-9 sm:w-10 sm:h-10`, ensured info section has `min-w-0 overflow-hidden` for proper text truncation.
   3. Swipe-reveal area reduced from `w-36` to `w-16` (icon-only, no text). Swipe thresholds updated to 90/40/64 matching the new narrower area.
-  4. On mobile: Badge status label replaced with a small coloured dot (`sm:hidden`), Badge text visible on `sm+`; "Habilitar" text hidden on mobile (icon only with `sm:inline`); status/disabled badge hidden on mobile (`hidden sm:inline`); workerType tag hidden on mobile (`hidden sm:inline`); grip handle hidden on mobile (`hidden sm:block`); action gap reduced to `gap-1`.
 * **Key Adjustments Applied:**
   1. [`app/admin/employees/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/employees/page.tsx) — `handleSave`:
      - Removed `fetch` call as the primary save path. Now performs `setDoc` to Firestore first as the guaranteed write.
@@ -370,5 +369,32 @@ This document maintains the complete, comprehensive, and chronological record of
      - Action items: `gap-1`; Badge visible only on `sm+`, replaced by colour-coded `w-2 h-2` dot on mobile.
      - "Habilitar" text: `hidden sm:inline`, icon always visible.
      - Worker type tag: `hidden sm:inline`.
+
+---
+
+### 23. Limit Lunch Cycles & Flag Unregistered Clock-Outs
+* **Date & Timestamp:** Monday, October 5, 2026 — 20:00:00 (`2026-10-05T20:00:00-06:00`)
+* **User Issue / Request:**
+  1. Employees could hit "Regreso de Comida" multiple times, but they should only be allowed one "Salida a Comida" and one "Regreso de Comida" per day. The buttons should be disabled once used.
+  2. If a worker clocks in but does not check out ("Salida"), it should be marked as "Salida no registrada" in reports, on the worker's profile (with light orange styling for that day), and in the admin menu.
+* **Root Cause:**
+  - `ActionPanel.tsx` allowed the lunch buttons to be active purely based on current status (`clocked_in` allows `lunch_out`, `on_lunch` allows `lunch_in`), without tracking if a cycle was already completed.
+  - The admin page and history page lacked explicit handling for the new "Salida no registrada" label and orange styling. The history page had an `unconfirmed_out` state but it wasn't styled prominently with orange. The admin page didn't identify past days with missing clock-outs.
+* **Implementation Summary:**
+  1. **ActionPanel:** Added check for existing `lunch_out` and `lunch_in` events in `todayEvents`. Once a cycle is completed (or an action is already taken), the corresponding lunch buttons are forcefully disabled.
+  2. **History Page:** Updated the card for `unconfirmed_out` status to use a light orange background (`bg-orange-50`), orange border (`border-orange-300`), and display a warning text message below the header. The badge text was updated to `"Salida no registrada"`.
+  3. **Admin Records Page:** Added logic to detect if the latest event for a worker was on a past day and was not a `clock_out`. If so, it sets their status to `"unregistered_out"` and labels it `"Salida no registrada ⚠️"`. Applied the same light orange styling to these rows. Added `"unregistered_out"` to the filter dropdown.
+* **Key Adjustments Applied:**
+  1. [`components/attendance/ActionPanel.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/components/attendance/ActionPanel.tsx):
+     - Added variables `hasLunchOut`, `hasLunchIn`, and `lunchCycleComplete`.
+     - Overridden `isActive = false` for lunch buttons if the corresponding action or full cycle has already been completed today.
+  2. [`app/history/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/history/page.tsx):
+     - Updated badge label to `"Salida no registrada"`.
+     - Applied conditional classes to `<Card>`: `bg-orange-50` and `border-orange-300` when `isUnconfirmedOut` is true.
+     - Added `<p>` warning message "⚠ No se registró salida para este día."
+  3. [`app/admin/records/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/records/page.tsx):
+     - Detected `unregistered_out` during grouping logic if the latest overall activity is from a previous day and is not a clock out.
+     - Styled the row card with orange background and border.
+     - Added filter option and filter logic for `"unregistered_out"`.
 
 

@@ -108,8 +108,19 @@ export default function HistoryPage() {
                 );
               }
 
+              const isUnconfirmedOut = (status as string) === "unconfirmed_out";
+
               return (
-                <Card key={date} padding="md" className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-xs">
+                <Card
+                  key={date}
+                  padding="md"
+                  className={[
+                    "shadow-xs",
+                    isUnconfirmedOut
+                      ? "bg-orange-50 dark:bg-orange-500/10 border-2 border-orange-300 dark:border-orange-600/50"
+                      : "bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700",
+                  ].join(" ")}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="font-semibold text-slate-900 dark:text-slate-100">
@@ -127,17 +138,23 @@ export default function HistoryPage() {
                         variant={
                           status === "clocked_out" ? "success" :
                           status === "clocked_in" ? "info" :
-                          (status as string) === "unconfirmed_out" ? "warning" :
+                          isUnconfirmedOut ? "warning" :
                           status === "on_lunch" ? "warning" : "muted"
                         }
                       >
                         {status === "clocked_out" ? "Completo" :
                          status === "clocked_in" ? "En Curso" :
-                         (status as string) === "unconfirmed_out" ? "Salida no confirmada" :
+                         isUnconfirmedOut ? "Salida no registrada" :
                          status === "on_lunch" ? "En Comida" : "Incompleto"}
                       </Badge>
                     </div>
                   </div>
+
+                  {isUnconfirmedOut && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mb-2 font-medium">
+                      ⚠ No se registró salida para este día.
+                    </p>
+                  )}
 
                   <div className="flex flex-wrap gap-2">
                     {dayEvents.map((ev) => (

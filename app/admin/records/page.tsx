@@ -189,6 +189,19 @@ export default function AdminRecordsPage() {
       group.statusVariant = "muted";
     }
 
+    // Detect past-day 'Salida no registrada': if the latest event is from a past day
+    // and the worker clocked in but never clocked out that day
+    if (
+      !latestToday &&
+      latestOverall &&
+      latestOverall.date < todayDateStr &&
+      (latestOverall.eventType === "clock_in" || latestOverall.eventType === "lunch_in" || latestOverall.eventType === "lunch_out")
+    ) {
+      group.status = "unregistered_out" as any;
+      group.statusLabel = "Salida no registrada ⚠️";
+      group.statusVariant = "warning";
+    }
+
     return group;
   });
 
@@ -201,6 +214,7 @@ export default function AdminRecordsPage() {
     if (filterType === "absent") return group.status === ("absent" as any) || group.status === "idle";
     if (filterType === "vacation") return group.status === ("vacation" as any);
     if (filterType === "medical_leave") return group.status === ("medical_leave" as any);
+    if (filterType === "unregistered_out") return group.status === ("unregistered_out" as any);
     return group.events.some((e) => e.eventType === filterType);
   });
 
@@ -274,6 +288,7 @@ export default function AdminRecordsPage() {
             </optgroup>
             <optgroup label="Estados e Incidencias">
               <option value="absent">Ausente</option>
+              <option value="unregistered_out">Salida no registrada</option>
               <option value="vacation">Vacaciones</option>
               <option value="medical_leave">Incapacidad Médica</option>
             </optgroup>
@@ -342,7 +357,12 @@ export default function AdminRecordsPage() {
               return (
                 <div
                   key={group.userId}
-                  className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-xs overflow-hidden transition-all duration-200"
+                  className={[
+                    "rounded-2xl shadow-xs overflow-hidden transition-all duration-200",
+                    group.status === ("unregistered_out" as any)
+                      ? "bg-orange-50 dark:bg-orange-500/10 border-2 border-orange-300 dark:border-orange-600/50"
+                      : "bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80",
+                  ].join(" ")}
                 >
                   {/* Single Row per Employee Header (Clickable Accordion Trigger) */}
                   <div

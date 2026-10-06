@@ -1,5 +1,32 @@
 # Git Commit Changes Log
 
+## Pending Changes (Awaiting User Approval for Deployment)
+* **Date & Timestamp:** Monday, October 5, 2026 — 20:00:00 (`2026-10-05T20:00:00-06:00`)
+* **Status:** Uncommitted / Awaiting Approval
+* **Proposed Commit Message:** `Limit lunch cycles per day and flag unregistered clock-outs`
+
+### Summary of Actions Taken
+
+1. **Modified Files:**
+   - [`components/attendance/ActionPanel.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/components/attendance/ActionPanel.tsx):
+     - Added logic to track if an employee has already taken lunch (`hasLunchOut`) or returned (`hasLunchIn`).
+     - Restricted the lunch buttons so only one lunch cycle can occur per day.
+   - [`app/history/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/history/page.tsx):
+     - Updated card styling for `unconfirmed_out` status to use a light orange background and border.
+     - Changed the badge label to "Salida no registrada" and added an explicit warning text.
+   - [`app/admin/records/page.tsx`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/app/admin/records/page.tsx):
+     - Added `unregistered_out` status detection for past days where the worker failed to clock out.
+     - Added the light orange styling to these rows and added "Salida no registrada" to the dropdown filter.
+   - [`Changes_up_to_date.md`](file:///Users/imaganal/Documents/CSCOMSFT%20copy/drap_store/Anti/Changes_up_to_date.md): Appended Section 23 with root causes, implementation summary, and key adjustments.
+
+2. **Verification:**
+   - Executed `npm run build` — compiled and statically exported 20/20 pages with **0 errors**.
+
+3. **Pending Actions:**
+   - Wait for user confirmation.
+   - Commit the changes, push to GitHub, and deploy to Firebase Hosting via `npm run build` and `npx -y firebase-tools deploy --only hosting`.
+
+---
 ## Latest Commit: `a3affd3f`
 * **Date & Timestamp:** Monday, October 5, 2026 — 10:51:15 (`2026-10-05T10:51:15-06:00`)
 * **Branch:** `main` (synchronized with `origin/main`)

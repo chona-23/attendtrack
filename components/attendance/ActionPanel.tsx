@@ -68,6 +68,11 @@ export function ActionPanel() {
   const [loadingEvent, setLoadingEvent] = useState<AttendanceEventType | null>(null);
   const [lastAction, setLastAction] = useState<string | null>(null);
 
+  // Track whether lunch has already been taken today (one cycle only)
+  const hasLunchOut = todayEvents.some((e) => e.eventType === "lunch_out");
+  const hasLunchIn = todayEvents.some((e) => e.eventType === "lunch_in");
+  const lunchCycleComplete = hasLunchOut && hasLunchIn;
+
   const handleAction = async (eventType: AttendanceEventType) => {
     if (!user || !profile) return;
 
@@ -141,7 +146,16 @@ export function ActionPanel() {
         <Card padding="lg">
           <div className="grid grid-cols-2 gap-3">
             {ACTION_BUTTONS.map((btn) => {
-              const isActive = btn.activeStatuses.includes(status);
+              let isActive = btn.activeStatuses.includes(status);
+              
+              // Enforce one lunch cycle per day: disable lunch_out if already taken, disable lunch_in if already returned
+              if (btn.eventType === "lunch_out" && (hasLunchOut || lunchCycleComplete)) {
+                isActive = false;
+              }
+              if (btn.eventType === "lunch_in" && (hasLunchIn || lunchCycleComplete)) {
+                isActive = false;
+              }
+
               const isLoading = loadingEvent === btn.eventType;
 
               return (
